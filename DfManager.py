@@ -93,7 +93,7 @@ class DfManager:
         return bets
                 
                 
-    def searchByNames(self):
+    def create_valid_bets(self):
         # go through each player name and find valid bets...
         for name in self.playerNames:
             filtered_df = self.df[self.df['name'] == name]
@@ -138,22 +138,24 @@ class DfManager:
                         if over_bet.name not in self.valid_bets:
                             self.valid_bets[over_bet.name] = []
                         self.valid_bets[over_bet.name].append((over_bet, temp))
+    
+    def parse_valid_bets(self):
+        for player in self.valid_bets.keys():
+            print("=============================================")
+            print("Bet summary for " + player + "\n")
+            
+            for valid_bets in self.valid_bets[player]:
+                print("+++++++++++++++++++++++++++++++++++")
+                print(f'MAIN BET\n\t -- {valid_bets[0]}\n')
+                print('VALID BETS')
+                for v in valid_bets[1]:
+                    print(f'\t -- {v}')
         
 
 def main():
     dfManager = DfManager('examples/wizards_vs_sixers.json')
-    dfManager.searchByNames()    
-    
-    for player in dfManager.valid_bets.keys():
-        print("=============================================")
-        print("Bet summary for " + player + "\n")
-        
-        for valid_bets in dfManager.valid_bets[player]:
-            print("+++++++++++++++++++++++++++++++++++")
-            print(f'MAIN BET\n\t -- {valid_bets[0]}\n')
-            print('VALID BETS')
-            for v in valid_bets[1]:
-                print(f'\t -- {v}')
+    dfManager.create_valid_bets()    
+    dfManager.parse_valid_bets()
                 
 if __name__ == "__main__":
     main()

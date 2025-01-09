@@ -1,9 +1,11 @@
 import requests
+import json
 
-class EndPoint:
+class BaseEndpoint:
     
-    def __init__(self, baseUrl):
+    def __init__(self, baseUrl, apiKey):
         self.m_baseUrl = baseUrl
+        self.apiKey = apiKey
         self.m_endpointUrl = None
         self.m_parameters = None
         
@@ -16,7 +18,7 @@ class EndPoint:
     def get(self):
         try:
             response = requests.get(self.m_baseUrl + self.m_endpointUrl, params=self.m_parameters)
-            return response.json()
+            return json.dumps(response.json())
         except:
             print('Error with following GET request')
             print('URL: ' + self.m_baseUrl + self.m_endpointUrl)

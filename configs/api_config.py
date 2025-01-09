@@ -1,0 +1,4 @@
+API_KEY='414053fc79db1a33165e95d3ec2c89ce'
+REGIONS='us'
+ODDS_FORMAT='american'
+DATE_FORMAT='iso'

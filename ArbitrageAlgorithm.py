@@ -1,9 +1,13 @@
 from typing import List, Tuple, Dict
+from dateutil import parser, tz
+from datetime import datetime
 
 class SingleBet:
-    def __init__(self, game_id, commence_time, bookmaker, betType, name, description, price, point):
+    TIME_ZONE = tz.gettz('America/New_York')
+    def __init__(self, game_id, commence_time, last_update, bookmaker, betType, name, description, price, point):
         self.game_id = game_id
         self.commence_time = commence_time
+        self.last_update = last_update
         self.bookmaker = bookmaker
         self.betType = betType
         self.name = name
@@ -12,12 +16,14 @@ class SingleBet:
         self.point = point
         
     def __str__(self) -> str:
-        return f'{self.bookmaker} = {self.betType} : line {self.description} {str(self.point)} for {self.name} @ {str(self.price)}'
+        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%Y-%m-%d %H:%M")
+        return f'{self.bookmaker} : {self.betType} : last updated @ {date} : line {self.description} {str(self.point)} for {self.name} @ {str(self.price)}'
 
     def to_dict(self):
         return {
             'game_id': self.game_id,
             'commence_time': self.commence_time,
+            'last_update': self.last_update,
             'bookmaker': self.bookmaker,
             'betType': self.betType,
             'name': self.name,
@@ -28,7 +34,7 @@ class SingleBet:
 
 class WinningBet(SingleBet):
     def __init__(self, bet: SingleBet, spendAmount: int):
-        super().__init__(bet.game_id, bet.commence_time, bet.bookmaker, bet.betType, bet.name, bet.description, bet.price, bet.point)
+        super().__init__(bet.game_id, bet.commence_time, bet.last_update, bet.bookmaker, bet.betType, bet.name, bet.description, bet.price, bet.point)
         self.spend_amount = spendAmount
         
     def __str__(self) -> str:
@@ -37,8 +43,15 @@ class WinningBet(SingleBet):
             price_str = "+" + str(self.price)
         else:
             price_str = str(self.price)
-        return f'{self.bookmaker} = {self.betType} : line {self.description} {str(self.point)} for {self.name} @ {price_str}: SPEND ${str(self.spend_amount)}'
-
+        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%Y-%m-%d %H:%M")
+        return f'{self.bookmaker} : {self.betType} :: last updated @ {date} : line {self.description} {str(self.point)} for {self.name} @ {price_str}: SPEND ${str(self.spend_amount)}'
+        
+class WinningBetScenario:
+    def __init__(self, bet1: WinningBet, bet2: WinningBet, totalWager: int, totalProfit: float):
+        self.bet1 = bet1
+        self.bet2 = bet2
+        self.totalWager = totalWager
+        self.totalProfit = totalProfit
         
     
 class ArbitrageAlgorithm:
@@ -103,14 +116,13 @@ class ArbitrageAlgorithm:
             
             self.prev_max = self.max_amount
     
-    def print_winnings(self):
+    def get_winning_data(self) -> WinningBetScenario:
         if self.max_amount > 0:
-            print("\nWe have found a profit....")
-            print("\n--------------- BET 1 ---------------\n")
-            print(self.bet1)
-            print("\n--------------- BET 2 ---------------\n")
-            print(self.bet2)
-            print("\n--------------- TOTAL WINNINGS ---------------\n")
-            print("$" + str(self.total_wager) + " bet pays total of $" + str(round(self.max_amount + self.total_wager, 2)) + " for profit of $" + str(round(self.max_amount, 2)) + "\n")
-        else:
-            print("\nno profit to bet found\n")
+            return WinningBetScenario(
+                self.bet1,
+                self.bet2,
+                self.total_wager,
+                str(round(self.max_amount, 2))
+            )
+        
+        return None

@@ -2,23 +2,18 @@
 from endpoints.available_sports_endpoint import AvailableSportsEndpoint
 from endpoints.upcoming_events_endpoint import UpcomingEventsEndpoint
 from endpoints.game_player_props_endpoint import GamePlayerPropsEndpoint
+from models.upcoming_events_response import UpcomingEventsEndResponse
 from typing import List
-from io import StringIO
-
-import pandas as pd
 
 class OddsAPI:
-    API_KEY='414053fc79db1a33165e95d3ec2c89ce'
+    API_KEY='a0e1d956578423ef5f949b3380de5e51'
     REGIONS='us,us2'
-    BOOKMAKERS='draftkings,fanduel,espnbet,betmgm,fliff'
+    BOOKMAKERS='draftkings,fanduel,williamhill_us,espnbet,betmgm,fliff'
     ODDS_FORMAT='american'
     DATE_FORMAT='iso'
     BASE_URL = 'https://api.the-odds-api.com/v4'
     NBA_MARKETS = 'configs/nba_markets_player_props.txt'
     NFL_MARKETS = 'configs/nfl_markets_player_props.txt'
-    SUPPORTED_SPORTS=["americanfootball_nfl", "basketball_nba"]
-    FOOTBALL = 0
-    BASKETBALL = 1
 
     # pass in sport to look at
     # we can change the sport of the API instance by calling its change_sport method
@@ -32,6 +27,8 @@ class OddsAPI:
         
         self.upcomingGames : List[str] = []
         self.response_data : List[str] = []
+        
+        self.games: List[UpcomingEventsEndResponse] = []
 
         self.m_sport = ""
         self.m_marketFile = ""
@@ -39,11 +36,9 @@ class OddsAPI:
         
     # update appropriate data when we change the sport
     def change_sport(self, sport):
-        if sport not in OddsAPI.SUPPORTED_SPORTS:
-            raise("Invalid sport for odds API: " + sport)        
         self.m_sport = sport
         
-        if self.m_sport == OddsAPI.SUPPORTED_SPORTS[OddsAPI.FOOTBALL]:
+        if self.m_sport == "americanfootball_nfl":
             self.m_marketFile = OddsAPI.NFL_MARKETS
         else:
             self.m_marketFile = OddsAPI.NBA_MARKETS
@@ -54,6 +49,7 @@ class OddsAPI:
     def getUpcomingGames(self):
         
         self.upcomingGames.clear()
+        self.games.clear()
         
         # set up endpoint
         upcomingEventsEndpoint = UpcomingEventsEndpoint(
@@ -68,6 +64,7 @@ class OddsAPI:
         # store gameIds 
         # TODO: look at commence time or add api params to only retrieve a timeframe of data
         for item in upcomingEventsEndpoint.result:
+            self.games.append(item)
             self.upcomingGames.append(item.id) 
     
     def getPlayerProps(self):
@@ -90,22 +87,3 @@ class OddsAPI:
             gamePlayerPropsEndpoint.get()
             
             self.response_data.append(gamePlayerPropsEndpoint.result)
-            break
-            
-    def create_df(self):
-        
-        for gamePlayerProps in self.response_data:
-            df = pd.read_json(StringIO(gamePlayerProps))
-            print(df)
-            # df.to_csv("test_results.csv")
-                   
-            
-
-def main():
-    # odds_api = OddsAPI(OddsAPI.SUPPORTED_SPORTS[OddsAPI.BASKETBALL])
-    # odds_api.getPlayerProps()
-    # odds_api.create_df()
-    
-if __name__ == "__main__":
-    main()
-        

@@ -1,5 +1,10 @@
+from dateutil import parser, tz
+from datetime import datetime
+
 
 class UpcomingEventsEndResponse:
+
+    TIME_ZONE = tz.gettz('America/New_York')
     
     def __init__(self, id: str, sports_key: str, sport_title: str, commence_time: str, home_team: str, away_team: str):
         self.id = id
@@ -10,4 +15,5 @@ class UpcomingEventsEndResponse:
         self.away_team = away_team
         
     def __str__(self):
-        return f'\nid={self.id}, sport_key={self.sports_key}, sport_title={self.sport_title}, commence_time={self.commence_time}, home_team={self.home_team}, away_team={self.away_team}\n'
+        date = parser.parse(self.commence_time).astimezone(UpcomingEventsEndResponse.TIME_ZONE).strftime("%Y-%m-%d %H:%M")
+        return f'{self.sport_title} - {self.home_team} vs {self.away_team} @ {date}'

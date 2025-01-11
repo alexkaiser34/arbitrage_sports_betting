@@ -7,23 +7,31 @@ from typing import List
 
 class OddsAPI:
     API_KEY='a0e1d956578423ef5f949b3380de5e51'
-    REGIONS='us,us2'
-    BOOKMAKERS='draftkings,fanduel,williamhill_us,espnbet,betmgm,fliff'
+    # REGIONS='us,us2'
+    # REGIONS='us,us2,us_dfs'
+    # BOOKMAKERS='draftkings,fanduel,williamhill_us,espnbet,betmgm,fliff'
+    # REGIONS='us,us2'
+    # REGIONS='us'
+    # BOOKMAKERS='draftkings,fanduel'
+    # BOOKMAKERS='draftkings,fanduel,williamhill_us,espnbet,betmgm,fliff,prizepicks,underdog'
     ODDS_FORMAT='american'
     DATE_FORMAT='iso'
     BASE_URL = 'https://api.the-odds-api.com/v4'
-    NBA_MARKETS = 'configs/nba_markets_player_props.txt'
-    NFL_MARKETS = 'configs/nfl_markets_player_props.txt'
+    
+    MARKET_FILE_DICT = {
+        "americanfootball_nfl": 'configs/nfl_markets_player_props.txt', 
+        "basketball_nba": 'configs/nba_markets_player_props.txt'
+    }
 
     # pass in sport to look at
     # we can change the sport of the API instance by calling its change_sport method
-    def __init__(self, sport):
+    def __init__(self, sport, bookmakers, regions):
         self.m_apiKey = OddsAPI.API_KEY
-        self.m_regions = OddsAPI.REGIONS
+        self.m_regions = regions
         self.m_oddsFormat = OddsAPI.ODDS_FORMAT
         self.m_dateFormat = OddsAPI.DATE_FORMAT
         self.m_baseUrl = OddsAPI.BASE_URL
-        self.m_bookMakers = OddsAPI.BOOKMAKERS
+        self.m_bookMakers = bookmakers
         
         self.upcomingGames : List[str] = []
         self.response_data : List[str] = []
@@ -37,14 +45,8 @@ class OddsAPI:
     # update appropriate data when we change the sport
     def change_sport(self, sport):
         self.m_sport = sport
-        
-        if self.m_sport == "americanfootball_nfl":
-            self.m_marketFile = OddsAPI.NFL_MARKETS
-        else:
-            self.m_marketFile = OddsAPI.NBA_MARKETS
-        
+        self.m_marketFile = OddsAPI.MARKET_FILE_DICT[self.m_sport]
         self.getUpcomingGames()
-        
         
     def getUpcomingGames(self):
         

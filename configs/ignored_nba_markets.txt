@@ -1,0 +1,54 @@
+player_points_q1
+player_rebounds_q1
+player_assists_q1
+player_blocks
+player_steals
+player_blocks_steals
+player_turnovers
+player_frees_made
+player_frees_attempts
+player_method_of_first_basket
+player_blocks_alternate
+player_steals_alternate
+player_first_basket
+
+player_points_rebounds_assists
+player_points_rebounds
+player_points_assists
+player_rebounds_assists
+player_points_assists_alternate
+player_points_rebounds_alternate
+player_rebounds_assists_alternate
+player_points_rebounds_assists_alternate
+
+For 12 game slate ----
+
+20 * 12 = 240
+240 + 1 = 241 (upcoming games)
+
+20000 / 241 = 83 calls per month
+
+100,000 / 241 = 414 calls per month
+
+5,000,000 / 241 = 20,746
+
+
+MAX CALL Frequency
+
+20,000:
+    83 / 31 --> 2.7 calls per day 
+
+    2-3 calls a day for a 12 game slate
+
+100,000:
+    414 / 31 --> 13.35 calls per day
+
+    1 call for 13-14 hours a day for a 12 game slate
+
+5,000,000:
+    20746 / 31 -->  669 calls per day
+    669 / 24 --> 28 calls per hour
+
+    1 call every 2 minutes 24 hours a day for a 12 game slate
+    --> allows us to track real time odds
+

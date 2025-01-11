@@ -1,0 +1,14 @@
+{
+    "main_app": {
+        "total_wager": 500,
+        "sport": "basketball",
+        "bookmakers": "draftkings,fanduel",
+        "regions": "us"
+    },
+
+    "test_algorithm": {
+        "total_wager": 500,
+        "bet1_odds": 120,
+        "bet2_odds": -105
+    }
+}

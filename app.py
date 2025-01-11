@@ -17,10 +17,10 @@ class App:
         FOOTBALL = 0
         BASKETBALL = 1
     
-    def __init__(self, sport:Sports, totalWager: int):
+    def __init__(self, sport:Sports, totalWager: int, bookmakers: str, regions: str):
         self.m_sport = App.SUPPORTED_SPORTS[sport.value]
         self.m_totalWager = totalWager
-        self.m_oddsApi: OddsAPI = OddsAPI(self.m_sport)
+        self.m_oddsApi: OddsAPI = OddsAPI(self.m_sport, bookmakers, regions)
         self.apiData: List[str] = []
         self.wins: List[WinningBetScenario] = []
         self.highestWin: WinningBetScenario = None

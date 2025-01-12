@@ -1,0 +1,5 @@
+batter_first_home_run
+batter_triples
+pitcher_record_a_win
+batter_singles
+batter_doubles

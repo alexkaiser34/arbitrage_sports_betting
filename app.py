@@ -2,7 +2,7 @@ from odds_api import OddsAPI
 from DfManager import DfManager
 from ArbitrageAlgorithm import ArbitrageAlgorithm, WinningBet, SingleBet, WinningBetScenario
 from enum import Enum
-from typing import List
+from typing import List, Dict
 from models.upcoming_events_response import UpcomingEventsEndResponse
 
 class App:
@@ -10,23 +10,26 @@ class App:
     # examples/available_sports.json
     SUPPORTED_SPORTS=[
         "americanfootball_nfl", 
-        "basketball_nba"
+        "basketball_nba",
+        "baseball_mlb"
     ]
     
     class Sports(Enum):
         FOOTBALL = 0
         BASKETBALL = 1
+        BASEBALL = 2
     
     def __init__(self, sport:str, totalWager: int, bookmakers: str, regions: str):
-        self.m_sport = sport
+        self.m_sport: List[str] = [x.strip() for x in sport.split(',')]
         self.m_totalWager = totalWager
         self.m_oddsApi: OddsAPI = OddsAPI(self.m_sport, bookmakers, regions)
-        self.apiData: List[str] = []
+        
+        self.apiData: Dict[str, List[str]] = {}
         self.wins: List[WinningBetScenario] = []
         self.highestWin: WinningBetScenario = None
     
     def run(self):
-        print('\n-------------- BEGIN GRABBING API DATA ---------------\n')
+        print('\n-------------- BEGIN GRABBING API DATA  ---------------\n')
         self.getPlayerProps()
         print('\n-------------- END GRABBING API DATA ---------------\n')
         print('\n-------------- START ALGORITHM ---------------\n')
@@ -38,7 +41,8 @@ class App:
     def getPlayerProps(self):
         self.apiData.clear()
         self.m_oddsApi.getPlayerProps()
-        self.apiData = self.m_oddsApi.response_data
+        for sport in self.m_sport:
+            self.apiData[sport] = self.m_oddsApi.response_data[sport]
         
         
     def runAlgorithm(self):
@@ -47,20 +51,21 @@ class App:
         
         self.wins = []
         
-        # each "data" should correspond to player props
-        # for one single game
-        for data in self.apiData:
-            # create the dataframe for eacb game
-            dfMan = DfManager(data, self.m_sport)
-            
-            # find the valid bets
-            dfMan.create_valid_bets()
-            
-            # run the algorithm
-            algo.find_profit(dfMan.m_valid_bets)
-            win = algo.get_winning_data()
-            if win is not None:
-                self.wins.append(win)
+        for sport in self.m_sport:
+            # each "data" should correspond to player props
+            # for one single game
+            for data in self.apiData[sport]:
+                # create the dataframe for eacb game
+                dfMan = DfManager(data, sport)
+                
+                # find the valid bets
+                dfMan.create_valid_bets()
+                
+                # run the algorithm
+                algo.find_profit(dfMan.m_valid_bets)
+                win = algo.get_winning_data()
+                if win is not None:
+                    self.wins.append(win)
                 
         # get the highest win
         self.highestWin = self._getHighestWin(self.wins)

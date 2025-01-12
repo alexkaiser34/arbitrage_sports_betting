@@ -43,6 +43,16 @@ NBA_MARKET_MAP = {
     "player_rebounds_assists": [ "player_rebounds_assists_alternate" ]
 }
 
+MLB_MARKET_MAP = {
+    "batter_home_runs": [ "batter_home_runs_alternate" ],
+    "batter_total_bases": [ "batter_total_bases_alternate" ],
+    "batter_hits": [ "batter_hits_alternate" ],
+    "batter_rbis": [ "batter_rbis_alternate" ],
+    "pitcher_hits_allowed": [ "pitcher_hits_allowed_alternate" ],
+    "pitcher_walks": [ "pitcher_walks_alternate" ],
+    "pitcher_strikeouts": [ "pitcher_strikeouts_alternate" ]
+}
+
 class DfManager:
     
     def __init__(self, jsonString: str, sport: str):

@@ -17,8 +17,8 @@ class App:
         FOOTBALL = 0
         BASKETBALL = 1
     
-    def __init__(self, sport:Sports, totalWager: int, bookmakers: str, regions: str):
-        self.m_sport = App.SUPPORTED_SPORTS[sport.value]
+    def __init__(self, sport:str, totalWager: int, bookmakers: str, regions: str):
+        self.m_sport = sport
         self.m_totalWager = totalWager
         self.m_oddsApi: OddsAPI = OddsAPI(self.m_sport, bookmakers, regions)
         self.apiData: List[str] = []

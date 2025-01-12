@@ -32,7 +32,6 @@ For 12 game slate ----
 
 5,000,000 / 241 = 20,746
 
-
 MAX CALL Frequency
 
 20,000:
@@ -51,4 +50,5 @@ MAX CALL Frequency
 
     1 call every 2 minutes 24 hours a day for a 12 game slate
     --> allows us to track real time odds
+    --> pretty much unlimited calls (we dont need to run for 24 hours a day)
 

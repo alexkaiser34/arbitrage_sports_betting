@@ -1,0 +1,7 @@
+player_rush_attempts
+player_rush_attempts_alternate
+player_pass_attempts
+player_pass_attempts_alternate
+player_receptions
+player_reception_longest_alternate
+player_rush_longest_alternate

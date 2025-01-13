@@ -4,7 +4,6 @@ from dynamodb import DynamoDbConfig
 def main():
     dynamo = DynamoDbConfig()
     appConfig = dynamo.getConfig()
-    print(appConfig)
 
     if appConfig.enabled:
         app = App(

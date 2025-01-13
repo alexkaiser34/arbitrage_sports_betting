@@ -2,6 +2,70 @@ from typing import List, Tuple, Dict
 from dateutil import parser, tz
 from datetime import datetime
 
+
+NAME_CONDENSER = {
+    "batter_home_runs": "HR",
+    "batter_hits": "hits",
+    "batter_total_bases": "tot bases",
+    "batter_rbis" : "RBIs",
+    "batter_runs_scored": "runs",
+    "batter_hits_runs_rbis" : "runs/RBIs",
+    "batter_walks" : "walks",
+    "batter_stolen_bases": "stolen bases",
+    "pitcher_strikeouts" : "SOs",
+    "pitcher_hits_allowed" : "pitcher hits alwd",
+    "pitcher_walks" : "pitcher walks",
+    "pitcher_earned_runs" : "pitcher ER",
+    "pitcher_outs" : "pitcher outs",
+    "batter_total_bases_alternate" : "tot bases alt",
+    "batter_home_runs_alternate" : "HR alt",
+    "batter_hits_alternate": "hits alt",
+    "batter_rbis_alternate": "RBIs alt",
+    "pitcher_hits_allowed_alternate": "pitcher hits alwd alt",
+    "pitcher_walks_alternate" : "pitcher walks alt",
+    "pitcher_strikeouts_alternate" : "SOs alt",
+    "player_points": "points",
+    "player_rebounds" : "REB",
+    "player_assists": "AST",
+    "player_threes": "threes",
+    "player_field_goals" : "FG",
+    "player_double_double" : "double-double",
+    "player_triple_double" : "triple-double",
+    "player_points_rebounds" : "PR",
+    "player_points_assists" : "PA",
+    "player_rebounds_assists" : "RA",
+    "player_points_alternate" : "points alt",
+    "player_rebounds_alternate": "REB alt",
+    "player_assists_alternate" : "AST alt",
+    "player_threes_alternate" : "threes alt",
+    "player_points_rebounds_assists" : "PRA",
+    "player_points_assists_alternate" : "PA alt",
+    "player_points_rebounds_alternate" : "PR alt",
+    "player_rebounds_assists_alternate" : "RA alt",
+    "player_points_rebounds_assists_alternate" : "PRA alt",
+    "player_pass_tds" : "pass TD",
+    "player_pass_yds" : "pass yds",
+    "player_reception_yds" : "rec yds",
+    "player_rush_yds" : "rush yds",
+    "player_tds_over" : "tds",
+    "player_anytime_td" : "anytime td",
+    "player_field_goals_alternate" : "FG alt",
+    "player_pass_tds_alternate" : "pass TD alt",
+    "player_pass_yds_alternate" : "pass yds alt",
+    "player_reception_yds_alternate" : "rec yds alt",
+    "player_rush_yds_alternate" : "rush yds alt",
+    "player_rush_longest_alternate" : "long rush alt",
+    "player_rush_longest" : "long rush",
+    "player_reception_longest" : "long rec",
+    "player_reception_longest_alternate" : "long rec alt",
+    "player_rush_attempts" : "# rushes",
+    "player_rush_attempts_alternate" : "# rushes alt",
+    "player_pass_attempts" : "# passes",
+    "player_pass_attempts_alternate" : "# passes alt",
+    "player_receptions" : "# rec",
+    "player_receptions_alternate" : "# rec alt"
+}
+
 class SingleBet:
     TIME_ZONE = tz.gettz('America/New_York')
     def __init__(self, game_id, commence_time, last_update, bookmaker, betType, name, description, price, point):
@@ -16,7 +80,7 @@ class SingleBet:
         self.point = point
         
     def __str__(self) -> str:
-        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%Y-%m-%d %H:%M")
+        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%m/%d %I:%M %p")
         return f'{self.bookmaker} : {self.betType} : last updated @ {date} : line {self.description} {str(self.point)} for {self.name} @ {str(self.price)}'
 
     def to_dict(self):
@@ -43,8 +107,9 @@ class WinningBet(SingleBet):
             price_str = "+" + str(self.price)
         else:
             price_str = str(self.price)
-        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%Y-%m-%d %H:%M")
-        return f'{self.bookmaker} : {self.betType} :: last updated @ {date} : line {self.description} {str(self.point)} for {self.name} @ {price_str}: SPEND ${str(self.spend_amount)}'
+        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%m/%d %I:%M %p")
+        bt = NAME_CONDENSER[self.betType]
+        return f'{self.bookmaker} :: {bt} :: {date} :: {self.description} {str(self.point)} for {self.name} @ {price_str}: ${str(self.spend_amount)}'
         
 class WinningBetScenario:
     def __init__(self, bet1: WinningBet, bet2: WinningBet, totalWager: int, totalProfit: float):

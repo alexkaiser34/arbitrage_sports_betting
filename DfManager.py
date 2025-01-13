@@ -57,7 +57,7 @@ class DfManager:
     
     def __init__(self, jsonString: str, sport: str):
         self.m_jsonString: str = jsonString
-        self.m_sport: str = sport
+        self.m_sport: List[str] = sport
         
         self.m_initial_df: DataFrame = self.create_df_from_json(self.m_jsonString)
         self.df: DataFrame = None

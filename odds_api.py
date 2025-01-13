@@ -16,6 +16,12 @@ class OddsAPI:
         "basketball_nba": 'configs/nba_markets_player_props.txt',
         "baseball_mlb": 'configs/mlb_markets_player_props.txt'
     }
+    
+    IGNORED_MARKETS_LIVE_DICT = {
+        "americanfootball_nfl": 'configs/ignored_nfl_markets_live.txt', 
+        "basketball_nba": 'configs/ignored_nba_markets_live.txt',
+        "baseball_mlb": 'configs/ignored_mlb_markets_live.txt'
+    }
 
     # pass in sport to look at
     # we can change the sport of the API instance by calling its change_sport method
@@ -27,6 +33,8 @@ class OddsAPI:
         self.m_baseUrl = OddsAPI.BASE_URL
         self.m_bookMakers = bookmakers
         
+        self.markets: Dict[str, str] = {}
+        
         self.upcomingGames : Dict[str, List[str]] = {}
         self.response_data : Dict[str, List[str]] = {}
         
@@ -34,6 +42,43 @@ class OddsAPI:
 
         self.m_sport: List[str] = sport
         self.getUpcomingGames()
+        self.setupMarkets()
+        
+    def setupMarkets(self):
+        for sport in self.m_sport:
+            self.markets[sport] = self.readSupportedMarkets(sport)
+            live_sport_markets = sport + "_live"
+            self.markets[live_sport_markets] = self.readLiveMarkets(sport)
+            
+            
+    def readLiveMarkets(self, sport):
+        s = ''
+        valid = set(line.strip() for line in open(OddsAPI.MARKET_FILE_DICT[sport]))
+        invalid_live = set(line.strip() for line in open(OddsAPI.IGNORED_MARKETS_LIVE_DICT[sport]))
+
+        result_set = valid - invalid_live
+        numberOfLines = len(result_set)
+        
+        for num, item in enumerate(result_set):
+            if num == (numberOfLines-1):
+                s += item
+            else:
+                s += item + ','
+                    
+        return s
+
+    def readSupportedMarkets(self, sport):
+        s = ''
+        with open(OddsAPI.MARKET_FILE_DICT[sport], 'r') as fp:
+            lines = fp.read().splitlines()
+            numberOfLines = len(lines)
+            for num, line in enumerate(lines):
+                if num == (numberOfLines-1):
+                    s += line
+                else:
+                    s += line + ','
+        return s
+            
         
     def getUpcomingGames(self):
         
@@ -59,16 +104,29 @@ class OddsAPI:
                 self.games.append(item)
                 self.upcomingGames[sport].append(item.id)
                 
+                
+    def find_game(self, id) -> UpcomingEventsEndResponse:
+        for game in self.games:
+            if game.id == id:
+                return game
+                
     def getPlayerProps(self):
 
         self.response_data.clear()
         
         for sport in self.m_sport:
-            marketFile = OddsAPI.MARKET_FILE_DICT[sport]        
             if sport not in self.response_data:
                 self.response_data[sport] = []
                 
             for gameId in self.upcomingGames[sport]:
+                game = self.find_game(gameId)
+                markets = ""
+                if game.upcoming:
+                    markets = self.markets[sport]
+                else:
+                    sport_string = sport + "_live"
+                    markets = self.markets[sport_string]
+
                 gamePlayerPropsEndpoint = GamePlayerPropsEndpoint(
                     self.m_baseUrl,
                     self.m_apiKey,
@@ -78,7 +136,7 @@ class OddsAPI:
                     self.m_bookMakers,
                     self.m_oddsFormat,
                     self.m_dateFormat,
-                    marketFile
+                    markets
                 )
                 gamePlayerPropsEndpoint.get()
                 self.response_data[sport].append(gamePlayerPropsEndpoint.result)

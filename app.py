@@ -4,6 +4,7 @@ from ArbitrageAlgorithm import ArbitrageAlgorithm, WinningBet, SingleBet, Winnin
 from enum import Enum
 from typing import List, Dict
 from models.upcoming_events_response import UpcomingEventsEndResponse
+from pushover import PushoverNotifications
 
 class App:
     # sports we care about, see a full list of supported sports in
@@ -23,6 +24,7 @@ class App:
         self.m_sport: List[str] = [x.strip() for x in sport.split(',')]
         self.m_totalWager = totalWager
         self.m_oddsApi: OddsAPI = OddsAPI(self.m_sport, bookmakers, regions)
+        self.m_pushover = PushoverNotifications()
         
         self.apiData: Dict[str, List[str]] = {}
         self.wins: List[WinningBetScenario] = []
@@ -87,19 +89,30 @@ class App:
             print('\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
             print('-------------- HIGHEST PROFIT BET ---------------')
             self.print_bet_scenario(self.highestWin)
-            
-    def print_bet_scenario(self, betScenario: WinningBetScenario):
+            self.sendHighestWinNotification()
+    
+    
+    def sendHighestWinNotification(self):
+        # only send notification when we have a 2% or higher profit
+        # Example: 500 * 0.02 = 10, only notify us when we have a profit >= 10
+        if (float(self.highestWin.totalProfit) > float(0.02 * self.highestWin.totalWager)):
+            winningGame = self.find_game(self.highestWin.bet1)
+            title = str(winningGame)
+            message = f'{str(self.highestWin.bet1)}\n\n{str(self.highestWin.bet2)}\n\n${str(self.highestWin.totalWager)} wager = ${str(round(float(self.highestWin.totalProfit), 2))} profit'
+            self.m_pushover.sendMessage(title, message)
         
-            winningGame = self.find_game(betScenario.bet1)
-            
-            print("\n--------------- GAME INFO -----------\n")
-            print(winningGame)
-            print("\n--------------- BET 1 ---------------\n")
-            print(betScenario.bet1)
-            print("\n--------------- BET 2 ---------------\n")
-            print(betScenario.bet2)
-            print("\n--------------- TOTAL WINNINGS ---------------\n")
-            print("$" + str(betScenario.totalWager) + " bet pays total of $" + str(round(float(betScenario.totalWager) + float(betScenario.totalProfit), 2)) + " for profit of $" + str(round(float(betScenario.totalProfit), 2)) + "\n")
+        
+    def print_bet_scenario(self, betScenario: WinningBetScenario):
+        winningGame = self.find_game(betScenario.bet1)
+        
+        print("\n--------------- GAME INFO -----------\n")
+        print(winningGame)
+        print("\n--------------- BET 1 ---------------\n")
+        print(betScenario.bet1)
+        print("\n--------------- BET 2 ---------------\n")
+        print(betScenario.bet2)
+        print("\n--------------- TOTAL WINNINGS ---------------\n")
+        print("$" + str(betScenario.totalWager) + " bet pays total of $" + str(round(float(betScenario.totalWager) + float(betScenario.totalProfit), 2)) + " for profit of $" + str(round(float(betScenario.totalProfit), 2)) + "\n")
             
         
     def _getHighestWin(self, wins: List[WinningBetScenario]) -> WinningBetScenario:

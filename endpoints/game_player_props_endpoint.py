@@ -1,12 +1,11 @@
 from endpoints.base_endpoint import BaseEndpoint
 from models.game_player_props_response import GamePlayerPropsResponse, Outcome, Market, Bookmaker
 from typing import List
-import os
 import json
 
 class GamePlayerPropsEndpoint(BaseEndpoint):
     
-    def __init__(self, baseUrl :str, apiKey :str, sport :str, eventId :str, regions :str, bookmakers :str, oddsFormat :str, dateFormat :str, marketFile: str):
+    def __init__(self, baseUrl :str, apiKey :str, sport :str, eventId, regions :str, bookmakers :str, oddsFormat :str, dateFormat :str, markets: str):
         super().__init__(baseUrl, apiKey)
         self.result : str = ""        
         self.sport = sport
@@ -16,9 +15,7 @@ class GamePlayerPropsEndpoint(BaseEndpoint):
         self.bookmakers = bookmakers
         self.oddsFormat = oddsFormat
         self.dateFormat = dateFormat
-
-        dirname = os.path.dirname(__file__)
-        self.marketFilePath = os.path.join(dirname, "../" + marketFile)
+        self.markets = markets
 
         self.setEndpointUrl('/sports/' + self.sport + '/events/' + self.eventId + '/odds/')
         self.initialize_parameters()
@@ -30,21 +27,8 @@ class GamePlayerPropsEndpoint(BaseEndpoint):
         d['bookmakers'] = self.bookmakers
         d['oddsFormat'] = self.oddsFormat
         d['dateFormat'] = self.dateFormat
-        d['markets'] = self.read_markets()
+        d['markets'] = self.markets
         self.setParameters(d)
-        
-    def read_markets(self):
-        s = ''
-        with open(self.marketFilePath, 'r') as fp:
-            lines = fp.read().splitlines()
-            numberOfLines = len(lines)
-            for num, line in enumerate(lines):
-                if num == (numberOfLines-1):
-                    s += line
-                else:
-                    s += line + ','
-                    
-        return s
         
     def get(self):
         json_response = super().get()

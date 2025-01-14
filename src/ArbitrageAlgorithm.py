@@ -97,9 +97,9 @@ class SingleBet:
         }
 
 class WinningBet(SingleBet):
-    def __init__(self, bet: SingleBet, spendAmount: int):
+    def __init__(self, bet: SingleBet, spendAmount: float):
         super().__init__(bet.game_id, bet.commence_time, bet.last_update, bet.bookmaker, bet.betType, bet.name, bet.description, bet.price, bet.point)
-        self.spend_amount = spendAmount
+        self.spend_amount = round(spendAmount, 2)
         
     def __str__(self) -> str:
         price_str = ""
@@ -116,15 +116,14 @@ class WinningBetScenario:
         self.bet1 = bet1
         self.bet2 = bet2
         self.totalWager = totalWager
-        self.totalProfit = totalProfit
+        self.totalProfit = round(totalProfit,2)
         
     
 class ArbitrageAlgorithm:
     def __init__(self, totalWager: int):
         self.total_wager: int = totalWager
         self.valid_bets: Dict[str, List[Tuple[SingleBet, List[SingleBet]]]]= []
-        self.max_amount: int = 0
-        self.prev_max: int = 0
+        self.win_profit: float = float(0)
         self.bet1: WinningBet = None
         self.bet2: WinningBet = None
         
@@ -135,12 +134,9 @@ class ArbitrageAlgorithm:
         if american_odds > 0:
             return (american_odds/100) + 1
         return (100/abs(american_odds)) + 1
-        
     
     def find_profit(self, bets: Dict[str,List[Tuple[SingleBet, List[SingleBet]]]]):
         self.valid_bets = bets
-        self.max_amount = 0
-        self.prev_max = 0
         
         for player in self.valid_bets.keys():
             
@@ -153,41 +149,38 @@ class ArbitrageAlgorithm:
                     
                     
     def _get_potential_gain(self, b1: SingleBet, b2: SingleBet):
-        b1_dec_odds = self._american_to_decimal(b1.price)
-        b2_dec_odds = self._american_to_decimal(b2.price)
         
-        b1_spend = 0
-        b2_spend = 0
+        bet1_decimal = self._american_to_decimal(b1.price)
+        bet2_decimal = self._american_to_decimal(b2.price)
         
-        for i in range(1, self.total_wager):
-            
-            b1_spend = i
-            b2_spend = self.total_wager - i
-            iteration_profit = 0
-            
-            b1_gain = (b1_spend * b1_dec_odds) - self.total_wager
-            b2_gain = (b2_spend * b2_dec_odds) - self.total_wager
-            
-            
-            if (b1_gain > 0) and (b2_gain > 0):
-                iteration_profit = min(b1_gain, b2_gain)
-            
-            if iteration_profit > 0:
-                self.max_amount = max(iteration_profit, self.max_amount)
-                if self.max_amount != self.prev_max:
-                    self.bet1 = WinningBet(b1, b1_spend)
-                    self.bet2 = WinningBet(b2, b2_spend)
-                    
-            
-            self.prev_max = self.max_amount
+        # If sum of inverses >= 1, not possible for arbitrage
+        if (1 / bet1_decimal) + (1/ bet2_decimal) >= 1:
+            self.win_profit = 0
+            return
+        
+        # fractional amounts on each outcome
+        bet1_spend = self.total_wager * (1/bet1_decimal) / ((1 /bet1_decimal)+(1/bet2_decimal))
+        bet2_spend = self.total_wager * (1/bet2_decimal) / ((1 /bet1_decimal)+(1/bet2_decimal))
+        
+        # minimum guarenteed profit
+        bet1_profit = (bet1_spend * (bet1_decimal - 1)) + bet1_spend
+        bet2_profit = (bet2_spend * (bet2_decimal - 1)) + bet2_spend
+        
+        temp_profit = round(min(bet1_profit, bet2_profit), 2)
+        
+        # get highest profit for each game
+        if round(temp_profit,2) > round(self.win_profit,2):
+            self.win_profit = temp_profit
+            self.bet1 = WinningBet(b1, bet1_spend)
+            self.bet2 = WinningBet(b2, bet2_spend)
     
     def get_winning_data(self) -> WinningBetScenario:
-        if self.max_amount > 0:
+        if self.win_profit > 0:
             return WinningBetScenario(
                 self.bet1,
                 self.bet2,
                 self.total_wager,
-                str(round(self.max_amount, 2))
+                str(round(self.win_profit - float(self.total_wager), 2))
             )
         
         return None

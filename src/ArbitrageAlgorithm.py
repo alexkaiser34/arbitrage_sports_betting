@@ -1,6 +1,7 @@
 from typing import List, Tuple, Dict
 from dateutil import parser, tz
 from datetime import datetime
+import math
 
 
 NAME_CONDENSER = {
@@ -110,14 +111,28 @@ class WinningBet(SingleBet):
         date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%m/%d %I:%M %p")
         bt = NAME_CONDENSER[self.betType]
         return f'{self.bookmaker} :: {bt} :: {date} :: {self.description} {str(self.point)} for {self.name} @ {price_str}: ${str(self.spend_amount)}'
-        
+
+    def __eq__(self, other):
+        if isinstance(other, WinningBet):
+            return ((self.game_id == other.game_id) and (self.betType == other.betType) and (math.isclose(self.price,other.price)) and (math.isclose(self.point,other.point)) and (self.bookmaker == other.bookmaker))
+        return False
+    
 class WinningBetScenario:
     def __init__(self, bet1: WinningBet, bet2: WinningBet, totalWager: int, totalProfit: float):
         self.bet1 = bet1
         self.bet2 = bet2
         self.totalWager = totalWager
         self.totalProfit = round(totalProfit,2)
-        
+    
+    def __eq__(self, other):
+        if isinstance(other, WinningBetScenario):
+            if (self.bet1 == other.bet1):
+                return ((self.bet2 == other.bet2) and (math.isclose(self.totalProfit, other.totalProfit)))
+            elif (self.bet1 == other.bet2):
+                return ((self.bet2 == other.bet1) and (math.isclose(self.totalProfit, other.totalProfit)))
+            elif (self.bet2 == other.bet1):
+                return ((self.bet1 == other.bet2) and (math.isclose(self.totalProfit, other.totalProfit)))
+        return False
     
 class ArbitrageAlgorithm:
     def __init__(self, totalWager: int):
@@ -137,6 +152,7 @@ class ArbitrageAlgorithm:
     
     def find_profit(self, bets: Dict[str,List[Tuple[SingleBet, List[SingleBet]]]]):
         self.valid_bets = bets
+        self.win_profit = 0
         
         for player in self.valid_bets.keys():
             
@@ -155,14 +171,13 @@ class ArbitrageAlgorithm:
         
         # If sum of inverses >= 1, not possible for arbitrage
         if (1 / bet1_decimal) + (1/ bet2_decimal) >= 1:
-            self.win_profit = 0
             return
         
         # fractional amounts on each outcome
         bet1_spend = self.total_wager * (1/bet1_decimal) / ((1 /bet1_decimal)+(1/bet2_decimal))
         bet2_spend = self.total_wager * (1/bet2_decimal) / ((1 /bet1_decimal)+(1/bet2_decimal))
         
-        # minimum guarenteed profit
+        # minimum guaranteed profit
         bet1_profit = (bet1_spend * (bet1_decimal - 1)) + bet1_spend
         bet2_profit = (bet2_spend * (bet2_decimal - 1)) + bet2_spend
         
@@ -175,12 +190,12 @@ class ArbitrageAlgorithm:
             self.bet2 = WinningBet(b2, bet2_spend)
     
     def get_winning_data(self) -> WinningBetScenario:
-        if self.win_profit > 0:
+        if self.win_profit > 0.01:
             return WinningBetScenario(
                 self.bet1,
                 self.bet2,
                 self.total_wager,
-                str(round(self.win_profit - float(self.total_wager), 2))
+                round(self.win_profit - float(self.total_wager), 2)
             )
         
         return None

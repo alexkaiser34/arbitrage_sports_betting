@@ -46,7 +46,15 @@ class App:
         for sport in self.m_sport:
             self.apiData[sport] = self.m_oddsApi.response_data[sport]
         
+    def remove_dup_wins(self):
+        temp = []
         
+        for win in self.wins:
+            if win not in temp:
+                temp.append(win)
+                
+        self.wins = temp
+    
     def runAlgorithm(self):
         
         algo = ArbitrageAlgorithm(self.m_totalWager)
@@ -68,7 +76,8 @@ class App:
                 win = algo.get_winning_data()
                 if win is not None:
                     self.wins.append(win)
-                
+
+        self.remove_dup_wins()
         # get the highest win
         self.highestWin = self._getHighestWin(self.wins)
         

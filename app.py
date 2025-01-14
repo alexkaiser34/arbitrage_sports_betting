@@ -97,7 +97,11 @@ class App:
         # Example: 500 * 0.02 = 10, only notify us when we have a profit >= 10
         if (float(self.highestWin.totalProfit) > float(0.02 * self.highestWin.totalWager)):
             winningGame = self.find_game(self.highestWin.bet1)
-            title = str(winningGame)
+            title = ""
+            if not winningGame.upcoming:
+                title = "LIVE: " + str(winningGame)
+            else:
+                title = str(winningGame)
             message = f'{str(self.highestWin.bet1)}\n\n{str(self.highestWin.bet2)}\n\n${str(self.highestWin.totalWager)} wager = ${str(round(float(self.highestWin.totalProfit), 2))} profit'
             self.m_pushover.sendMessage(title, message)
         

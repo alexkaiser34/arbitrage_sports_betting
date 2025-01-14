@@ -17,7 +17,10 @@ class DynamoDbConfig:
     
     def __init__(self):
         self.config : Config = None
-        self.dynamo_table = boto3.resource('dynamodb').Table(Config.TABLE_NAME)
+        self.dynamo_table = boto3.resource(
+            'dynamodb', 
+            region_name='us-east-2'
+        ).Table(Config.TABLE_NAME)
 
     def getConfig(self) -> Config:
         response = self.dynamo_table.get_item(Key={'id': 1})

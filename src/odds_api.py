@@ -4,6 +4,7 @@ from endpoints.upcoming_events_endpoint import UpcomingEventsEndpoint
 from endpoints.game_player_props_endpoint import GamePlayerPropsEndpoint
 from models.upcoming_events_response import UpcomingEventsEndResponse
 from typing import List, Dict
+import os
 
 class OddsAPI:
     API_KEY='a0e1d956578423ef5f949b3380de5e51'
@@ -12,15 +13,15 @@ class OddsAPI:
     BASE_URL = 'https://api.the-odds-api.com/v4'
     
     MARKET_FILE_DICT = {
-        "americanfootball_nfl": 'configs/nfl_markets_player_props.txt', 
-        "basketball_nba": 'configs/nba_markets_player_props.txt',
-        "baseball_mlb": 'configs/mlb_markets_player_props.txt'
+        "americanfootball_nfl": str(os.path.join(os.path.dirname(__file__), './configs/nfl_markets_player_props.txt')), 
+        "basketball_nba": str(os.path.join(os.path.dirname(__file__), './configs/nba_markets_player_props.txt')),
+        "baseball_mlb": str(os.path.join(os.path.dirname(__file__), '.configs/mlb_markets_player_props.txt'))
     }
     
     IGNORED_MARKETS_LIVE_DICT = {
-        "americanfootball_nfl": 'configs/ignored_nfl_markets_live.txt', 
-        "basketball_nba": 'configs/ignored_nba_markets_live.txt',
-        "baseball_mlb": 'configs/ignored_mlb_markets_live.txt'
+        "americanfootball_nfl": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_nfl_markets_live.txt')), 
+        "basketball_nba": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_nba_markets_live.txt')),
+        "baseball_mlb": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_mlb_markets_live.txt'))
     }
 
     # pass in sport to look at

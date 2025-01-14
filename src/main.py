@@ -1,6 +1,7 @@
 from app import App
 from dynamodb import DynamoDbConfig
     
+
 def main():
     dynamo = DynamoDbConfig()
     appConfig = dynamo.getConfig()
@@ -15,6 +16,6 @@ def main():
         app.run()
     else:
         print("App is currently disabled")
-
-if __name__ == "__main__":
+        
+def handler(event, context):
     main()

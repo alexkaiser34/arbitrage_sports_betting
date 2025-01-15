@@ -81,7 +81,7 @@ class SingleBet:
         self.point = point
         
     def __str__(self) -> str:
-        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%m/%d %I:%M %p")
+        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%m/%d %I:%M:%S %p")
         return f'{self.bookmaker} : {self.betType} : last updated @ {date} : line {self.description} {str(self.point)} for {self.name} @ {str(self.price)}'
 
     def to_dict(self):
@@ -108,7 +108,7 @@ class WinningBet(SingleBet):
             price_str = "+" + str(self.price)
         else:
             price_str = str(self.price)
-        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%m/%d %I:%M %p")
+        date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%m/%d %I:%M:%S %p")
         bt = NAME_CONDENSER[self.betType]
         return f'{self.bookmaker} :: {bt} :: {date} :: {self.description} {str(self.point)} for {self.name} @ {price_str}: ${str(self.spend_amount)}'
 

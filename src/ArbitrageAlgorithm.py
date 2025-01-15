@@ -138,9 +138,7 @@ class ArbitrageAlgorithm:
     def __init__(self, totalWager: int):
         self.total_wager: int = totalWager
         self.valid_bets: Dict[str, List[Tuple[SingleBet, List[SingleBet]]]]= []
-        self.win_profit: float = float(0)
-        self.bet1: WinningBet = None
-        self.bet2: WinningBet = None
+        self.winning_bets : List[WinningBetScenario] = []
         
     def setTotalWager(self, totalWager: int):
         self.total_wager = totalWager
@@ -153,9 +151,8 @@ class ArbitrageAlgorithm:
     def find_profit(self, bets: Dict[str,List[Tuple[SingleBet, List[SingleBet]]]]):
         self.valid_bets = bets
         self.win_profit = 0
-        
+        self.winning_bets = []
         for player in self.valid_bets.keys():
-            
             for valid_bets in self.valid_bets[player]:
                 bet1 = valid_bets[0]
                 
@@ -181,21 +178,14 @@ class ArbitrageAlgorithm:
         bet1_profit = (bet1_spend * (bet1_decimal - 1)) + bet1_spend
         bet2_profit = (bet2_spend * (bet2_decimal - 1)) + bet2_spend
         
-        temp_profit = round(min(bet1_profit, bet2_profit), 2)
+        total_profit = round(min(bet1_profit, bet2_profit), 2)
         
-        # get highest profit for each game
-        if round(temp_profit,2) > round(self.win_profit,2):
-            self.win_profit = temp_profit
-            self.bet1 = WinningBet(b1, bet1_spend)
-            self.bet2 = WinningBet(b2, bet2_spend)
-    
-    def get_winning_data(self) -> WinningBetScenario:
-        if self.win_profit > 0.01:
-            return WinningBetScenario(
-                self.bet1,
-                self.bet2,
-                self.total_wager,
-                round(self.win_profit - float(self.total_wager), 2)
+        if total_profit > 0:
+            self.winning_bets.append(
+                WinningBetScenario(
+                    WinningBet(b1, bet1_spend),
+                    WinningBet(b2, bet2_spend),
+                    self.total_wager,
+                    round(total_profit - float(self.total_wager), 2)
+                )
             )
-        
-        return None

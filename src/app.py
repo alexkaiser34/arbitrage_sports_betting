@@ -54,6 +54,9 @@ class App:
                 temp.append(win)
                 
         self.wins = temp
+
+    def sort_wins(self):
+        self.wins.sort(key=lambda x: x.totalProfit, reverse=True)
     
     def runAlgorithm(self):
         
@@ -73,11 +76,13 @@ class App:
                 
                 # run the algorithm
                 algo.find_profit(dfMan.m_valid_bets)
-                win = algo.get_winning_data()
-                if win is not None:
-                    self.wins.append(win)
+
+                if len(algo.winning_bets) > 0:
+                    self.wins.extend(algo.winning_bets)
 
         self.remove_dup_wins()
+        self.sort_wins()
+
         # get the highest win
         self.highestWin = self._getHighestWin(self.wins)
         
@@ -98,12 +103,17 @@ class App:
             print('\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
             print('-------------- HIGHEST PROFIT BET ---------------')
             self.print_bet_scenario(self.highestWin)
-            self.sendHighestWinNotification()
+            self.sendWinNotifications()
     
     
-    def sendHighestWinNotification(self):
+    def sendWinNotifications(self):
+        message = ''
+        title = ''
+        
         # only send notification when we have a 2% or higher profit
         # Example: 500 * 0.02 = 10, only notify us when we have a profit >= 10
+        
+        # start with highest bet
         if (float(self.highestWin.totalProfit) > float(0.02 * self.highestWin.totalWager)):
             winningGame = self.find_game(self.highestWin.bet1)
             title = ""
@@ -111,8 +121,34 @@ class App:
                 title = "LIVE: " + str(winningGame)
             else:
                 title = str(winningGame)
-            message = f'{str(self.highestWin.bet1)}\n\n{str(self.highestWin.bet2)}\n\n${str(self.highestWin.totalWager)} wager = ${str(round(float(self.highestWin.totalProfit), 2))} profit'
-            self.m_pushover.sendMessage(title, message)
+            message += f'{str(self.highestWin.bet1)}\n\n{str(self.highestWin.bet2)}\n\n${str(self.highestWin.totalWager)} wager = ${str(round(float(self.highestWin.totalProfit), 2))} profit'
+        
+        # only print 2 additional options... we are limited to 1024 characters per message
+        winCount = 1
+        priority = 0
+        for win in self.wins:
+            if win != self.highestWin:
+                winCount += 1
+                if winCount < 4:
+                    game_str = ""
+                    winningGame = self.find_game(win.bet1)
+                    
+                    # wins with profits over 10 percent get high priority (1)
+                    # ignore this for live bets because this is common
+                    if float(win.totalProfit) > float(0.1 * win.totalWager):
+                        if winningGame.upcoming:
+                            priority = 1
+
+                    if not winningGame.upcoming:
+                        game_str = "LIVE: " + str(winningGame)
+                    else:
+                        game_str = str(winningGame)
+                    message += f'\n\n+++++++++++ BET OPTION {str(winCount)} +++++++++++\n\n'
+                    message += game_str
+                    message += f'\n\n{str(win.bet1)}\n\n{str(win.bet2)}\n\n${str(win.totalWager)} wager = ${str(round(float(win.totalProfit), 2))} profit'
+    
+        if message != '':
+            self.m_pushover.sendMessage(title, message, priority)
         
         
     def print_bet_scenario(self, betScenario: WinningBetScenario):

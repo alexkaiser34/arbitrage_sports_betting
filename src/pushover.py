@@ -12,11 +12,13 @@ class PushoverNotifications:
     self.m_user = PushoverNotifications.USER
     self.m_baseUrl = PushoverNotifications.BASE_URL
 
-  def sendMessage(self, title: str, message: str):
+  def sendMessage(self, title: str, message: str, priority=0):
     data = {
       "token": self.m_token,
       "user": self.m_user,
+      "ttl": 3600,
       "title": title,
+      "priority": priority,
       "message": message
     }
     

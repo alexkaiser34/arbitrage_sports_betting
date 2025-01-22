@@ -84,7 +84,8 @@ class App:
         self.sort_wins()
 
         # get the highest win
-        self.highestWin = self.wins[0]
+        if len(self.wins) > 0:
+            self.highestWin = self.wins[0]
         
     def find_game(self, bet: WinningBet) -> UpcomingEventsEndResponse:
         for game in self.m_oddsApi.games:

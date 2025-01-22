@@ -148,6 +148,16 @@ class ArbitrageAlgorithm:
             return (american_odds/100) + 1
         return (100/abs(american_odds)) + 1
     
+    def _isBetOld(self, bet: SingleBet):
+        timeOld = parser.parse(bet.last_update).astimezone(SingleBet.TIME_ZONE).timestamp()
+        timeNow =  datetime.now().astimezone(SingleBet.TIME_ZONE).timestamp()
+
+        minutes = 2.5
+
+        # return true on bets older than 2.5 minutes...
+        # this most likely means the bet is not available
+        return ((timeNow - timeOld) > (60.0 * minutes))
+
     def find_profit(self, bets: Dict[str,List[Tuple[SingleBet, List[SingleBet]]]]):
         self.valid_bets = bets
         self.win_profit = 0
@@ -158,7 +168,8 @@ class ArbitrageAlgorithm:
                 
                 for vb in valid_bets[1]:
                     bet2 = vb
-                    self._get_potential_gain(bet1, bet2)
+                    if (not self._isBetOld(bet1)) and (not self._isBetOld(bet2)):
+                        self._get_potential_gain(bet1, bet2)
                     
                     
     def _get_potential_gain(self, b1: SingleBet, b2: SingleBet):

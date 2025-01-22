@@ -84,7 +84,7 @@ class App:
         self.sort_wins()
 
         # get the highest win
-        self.highestWin = self._getHighestWin(self.wins)
+        self.highestWin = self.wins[0]
         
     def find_game(self, bet: WinningBet) -> UpcomingEventsEndResponse:
         for game in self.m_oddsApi.games:
@@ -109,44 +109,41 @@ class App:
     def sendWinNotifications(self):
         message = ''
         title = ''
-        
-        # only send notification when we have a 2% or higher profit
-        # Example: 500 * 0.02 = 10, only notify us when we have a profit >= 10
-        
-        # start with highest bet
-        if (float(self.highestWin.totalProfit) > float(0.02 * self.highestWin.totalWager)):
-            winningGame = self.find_game(self.highestWin.bet1)
-            title = ""
-            if not winningGame.upcoming:
-                title = "LIVE: " + str(winningGame)
-            else:
-                title = str(winningGame)
-            message += f'{str(self.highestWin.bet1)}\n\n{str(self.highestWin.bet2)}\n\n${str(self.highestWin.totalWager)} wager = ${str(round(float(self.highestWin.totalProfit), 2))} profit'
-        
-        # only print 2 additional options... we are limited to 1024 characters per message
-        winCount = 1
         priority = 0
-        for win in self.wins:
-            if win != self.highestWin:
-                winCount += 1
-                if winCount < 4:
-                    game_str = ""
-                    winningGame = self.find_game(win.bet1)
-                    
-                    # wins with profits over 10 percent get high priority (1)
-                    # ignore this for live bets because this is common
-                    if float(win.totalProfit) > float(0.1 * win.totalWager):
-                        if winningGame.upcoming:
-                            priority = 1
 
+        for winCount, win in enumerate(self.wins):
+            # only send games with 2% or more profit
+            shouldSendMessage =  (float(win.totalProfit) > float(0.02 * win.totalWager))
+            if shouldSendMessage:
+                # game object
+                winningGame = self.find_game(win.bet1)
+
+                # highest win, make title
+                if winCount == 0:
+                    if not winningGame.upcoming:
+                        title = "LIVE: " + str(winningGame)
+                    else:
+                        title = str(winningGame)
+                    message += f'{str(win.bet1)}\n\n{str(win.bet2)}\n\n${str(win.totalWager)} wager = ${str(round(float(win.totalProfit), 2))} profit'
+
+                # next 2 highest wins
+                elif winCount < 3:
+                    game_str = ""
                     if not winningGame.upcoming:
                         game_str = "LIVE: " + str(winningGame)
                     else:
                         game_str = str(winningGame)
-                    message += f'\n\n+++++++++++ BET OPTION {str(winCount)} +++++++++++\n\n'
+
+                    message += f'\n\n+++++++++++ BET OPTION {str(winCount + 1)} +++++++++++\n\n'
                     message += game_str
                     message += f'\n\n{str(win.bet1)}\n\n{str(win.bet2)}\n\n${str(win.totalWager)} wager = ${str(round(float(win.totalProfit), 2))} profit'
-    
+
+                # mark message as high priority when profit is greater than 10 percent and game is upcoming
+                isHighPriority = ((float(win.totalProfit) > float(0.1 * win.totalWager)) and winningGame.upcoming)
+                if isHighPriority:
+                    priority = 1
+
+        # send message if it is not empty
         if message != '':
             self.m_pushover.sendMessage(title, message, priority)
         

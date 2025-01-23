@@ -171,9 +171,32 @@ class ArbitrageAlgorithm:
                     if (not self._isBetOld(bet1)) and (not self._isBetOld(bet2)):
                         self._get_potential_gain(bet1, bet2)
                     
-                    
+    def _round_numbers(self, num: float, roundUp: str) -> int:
+        abs_number = abs(num)
+        func = math.ceil if roundUp == "up" else math.floor if roundUp == "down" else round
+
+        num_digits = len(str(int(abs_number)))
+        res = 0
+
+        if num_digits <= 2:
+            res = num
+        elif num_digits == 3:
+            res = func(num / 10) * 10
+        elif num_digits == 4:
+            res = func(num / 50) * 50
+        elif num_digits == 5:
+            res = func(num / 100) * 100
+        else:
+            res = func(num / 1000) * 1000
+
+        return res
+
     def _get_potential_gain(self, b1: SingleBet, b2: SingleBet):
         
+        win_profit = 0
+        win_bet1_spend = 0
+        win_bet2_spend = 0
+
         bet1_decimal = self._american_to_decimal(b1.price)
         bet2_decimal = self._american_to_decimal(b2.price)
         
@@ -185,26 +208,53 @@ class ArbitrageAlgorithm:
         bet1_spend = self.total_wager * (1/bet1_decimal) / ((1 /bet1_decimal)+(1/bet2_decimal))
         bet2_spend = self.total_wager * (1/bet2_decimal) / ((1 /bet1_decimal)+(1/bet2_decimal))
         
-        # minimum guaranteed profit
-        bet1_profit = (bet1_spend * (bet1_decimal - 1)) + bet1_spend
-        bet2_profit = (bet2_spend * (bet2_decimal - 1)) + bet2_spend
+        # round numbers and find profit...
+        # 2 scenarios
+        # -> round bet1 up and bet2 down
+        # -> round bet1 down and bet2 up
+        for i in range(2):
+            b1_spend = 0
+            b2_spend = 0
+            # round bet 1 up, bet 2 down...
+            if i == 0:
+                b1_spend = self._round_numbers(bet1_spend, "up")
+                b2_spend = self._round_numbers(bet2_spend - (b1_spend - bet1_spend), "close")
+
+                if ((b1_spend + b2_spend) > self.total_wager):
+                    b2_spend = self._round_numbers(bet2_spend- (b1_spend - bet1_spend), "down")
+
+            # round bet 1 down, bet 2 up...
+            else:
+                b2_spend = self._round_numbers(bet2_spend, "up")
+                b1_spend = self._round_numbers(bet1_spend - (b2_spend - bet2_spend), "close")
+
+                if ((b1_spend + b2_spend) > self.total_wager):
+                    b1_spend = self._round_numbers(bet1_spend - (b2_spend - bet2_spend), "down")
+
+            bet1_profit = (b1_spend * (bet1_decimal - 1)) + b1_spend
+            bet2_profit = (b2_spend * (bet2_decimal - 1)) + b2_spend
+            temp_profit = round(min(bet1_profit, bet2_profit), 2)
+            if temp_profit > self.total_wager:
+                if temp_profit > win_profit:
+                    win_profit = temp_profit
+                    win_bet1_spend = b1_spend
+                    win_bet2_spend = b2_spend
         
-        total_profit = round(min(bet1_profit, bet2_profit), 2)
         
-        if round((total_profit - float(self.total_wager)), 2) > 0.0:
-            # if we encounter a scenario with greater than 20% profit (ex: 500 pays 100)
+        if round((win_profit - float(self.total_wager)), 2) > 0.0:
+            # if we encounter a scenario with greater than 30% profit (ex: 500 pays 150)
             # we are likely viewing live data that has not been updated... maybe somebody just
             # hit a 3, made an assist, scored a bucket, etc. and only 1 book maker has reflected this change.
             # Lets ignore this data because when we go to place the bet, it will have
             # changed and will no longer be valid
             #
-            # Bets with 20% profit or less are more likely to be captured
-            if (round(total_profit - float(self.total_wager), 2) < (round(0.2 * self.total_wager, 2))):
+            # Bets with 30% profit or less are more likely to be captured
+            if (round(win_profit - float(self.total_wager), 2) < (round(0.3 * self.total_wager, 2))):
                 self.winning_bets.append(
                     WinningBetScenario(
-                        WinningBet(b1, bet1_spend),
-                        WinningBet(b2, bet2_spend),
+                        WinningBet(b1, win_bet1_spend),
+                        WinningBet(b2, win_bet2_spend),
                         self.total_wager,
-                        round(total_profit - float(self.total_wager), 2)
+                        round(win_profit - float(self.total_wager), 2)
                     )
                 )

@@ -242,14 +242,11 @@ class ArbitrageAlgorithm:
         
         
         if round((win_profit - float(self.total_wager)), 2) > 0.0:
-            # if we encounter a scenario with greater than 30% profit (ex: 500 pays 150)
-            # we are likely viewing live data that has not been updated... maybe somebody just
-            # hit a 3, made an assist, scored a bucket, etc. and only 1 book maker has reflected this change.
-            # Lets ignore this data because when we go to place the bet, it will have
-            # changed and will no longer be valid
-            #
-            # Bets with 30% profit or less are more likely to be captured
-            if (round(win_profit - float(self.total_wager), 2) < (round(0.3 * self.total_wager, 2))):
+            # if we encounter a bet with > 6% return, ignore it
+            # bookmakers will be able to catch on too quickly if
+            # we make that big of a return
+            # lets filter our search between 2 and 6%...
+            if (round(win_profit - float(self.total_wager), 2) < (round(0.061 * self.total_wager, 2))):
                 self.winning_bets.append(
                     WinningBetScenario(
                         WinningBet(b1, win_bet1_spend),

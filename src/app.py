@@ -114,6 +114,7 @@ class App:
 
         for winCount, win in enumerate(self.wins):
             # only send games with 2% or more profit
+            # We should not receive profit more than 6%
             shouldSendMessage =  (float(win.totalProfit) > float(0.02 * win.totalWager))
             if shouldSendMessage:
                 # game object

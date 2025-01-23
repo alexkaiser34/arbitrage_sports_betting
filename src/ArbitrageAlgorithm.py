@@ -191,12 +191,20 @@ class ArbitrageAlgorithm:
         
         total_profit = round(min(bet1_profit, bet2_profit), 2)
         
-        if total_profit > 0:
-            self.winning_bets.append(
-                WinningBetScenario(
-                    WinningBet(b1, bet1_spend),
-                    WinningBet(b2, bet2_spend),
-                    self.total_wager,
-                    round(total_profit - float(self.total_wager), 2)
+        if round((total_profit - float(self.total_wager)), 2) > 0.0:
+            # if we encounter a scenario with greater than 20% profit (ex: 500 pays 100)
+            # we are likely viewing live data that has not been updated... maybe somebody just
+            # hit a 3, made an assist, scored a bucket, etc. and only 1 book maker has reflected this change.
+            # Lets ignore this data because when we go to place the bet, it will have
+            # changed and will no longer be valid
+            #
+            # Bets with 20% profit or less are more likely to be captured
+            if (round(total_profit - float(self.total_wager), 2) < (round(0.2 * self.total_wager, 2))):
+                self.winning_bets.append(
+                    WinningBetScenario(
+                        WinningBet(b1, bet1_spend),
+                        WinningBet(b2, bet2_spend),
+                        self.total_wager,
+                        round(total_profit - float(self.total_wager), 2)
+                    )
                 )
-            )

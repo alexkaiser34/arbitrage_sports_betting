@@ -16,7 +16,7 @@ class TestAlgorithm:
 
     def _round_numbers(self, num, roundUp):
         abs_number = abs(num)
-        func = math.ceil if roundUp == "up" else math.fabs if roundUp == "down" else round
+        func = math.ceil if roundUp == "up" else math.floor if roundUp == "down" else round
 
         num_digits = len(str(int(abs_number)))
         res = 0

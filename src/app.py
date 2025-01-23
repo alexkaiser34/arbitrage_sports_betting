@@ -20,10 +20,10 @@ class App:
         BASKETBALL = 1
         BASEBALL = 2
     
-    def __init__(self, sport:str, totalWager: int, bookmakers: str, regions: str):
+    def __init__(self, live_enabled: bool, sport:str, totalWager: int, bookmakers: str, regions: str):
         self.m_sport: List[str] = [x.strip() for x in sport.split(',')]
         self.m_totalWager = totalWager
-        self.m_oddsApi: OddsAPI = OddsAPI(self.m_sport, bookmakers, regions)
+        self.m_oddsApi: OddsAPI = OddsAPI(live_enabled, self.m_sport, bookmakers, regions)
         self.m_pushover = PushoverNotifications()
         
         self.apiData: Dict[str, List[str]] = {}

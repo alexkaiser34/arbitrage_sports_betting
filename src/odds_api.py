@@ -26,7 +26,8 @@ class OddsAPI:
 
     # pass in sport to look at
     # we can change the sport of the API instance by calling its change_sport method
-    def __init__(self, sport: List[str], bookmakers: str, regions: str):
+    def __init__(self, live_enabled: bool, sport: List[str], bookmakers: str, regions: str):
+        self.liveEnabled = live_enabled
         self.m_apiKey = OddsAPI.API_KEY
         self.m_regions = regions
         self.m_oddsFormat = OddsAPI.ODDS_FORMAT
@@ -102,8 +103,14 @@ class OddsAPI:
             
             # store gameIds 
             for item in upcomingEventsEndpoint.result:
-                self.games.append(item)
-                self.upcomingGames[sport].append(item.id)
+                if self.liveEnabled:
+                    self.games.append(item)
+                    self.upcomingGames[sport].append(item.id)
+                else:
+                    # upcoming games only
+                    if item.upcoming:
+                        self.games.append(item)
+                        self.upcomingGames[sport].append(item.id)
                 
                 
     def find_game(self, id) -> UpcomingEventsEndResponse:

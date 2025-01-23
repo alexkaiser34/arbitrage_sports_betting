@@ -8,6 +8,7 @@ def main():
 
     if appConfig.enabled:
         app = App(
+            appConfig.live_enabled,
             appConfig.sports,
             appConfig.wager,
             appConfig.bookmakers,

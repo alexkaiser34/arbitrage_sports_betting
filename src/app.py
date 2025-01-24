@@ -140,8 +140,8 @@ class App:
                     message += game_str
                     message += f'\n\n{str(win.bet1)}\n\n{str(win.bet2)}\n\n${str(win.totalWager)} wager = ${str(round(float(win.totalProfit), 2))} profit'
 
-                # mark message as high priority when profit is greater than 10 percent and game is upcoming
-                isHighPriority = ((float(win.totalProfit) > float(0.1 * win.totalWager)) and winningGame.upcoming)
+                # mark message as high priority when profit is greater than 5 percent and game is upcoming
+                isHighPriority = ((float(win.totalProfit) > float(0.05 * win.totalWager)) and winningGame.upcoming)
                 if isHighPriority:
                     priority = 1
 

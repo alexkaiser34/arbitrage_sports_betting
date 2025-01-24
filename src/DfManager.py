@@ -127,6 +127,9 @@ class DfManager:
             elif self.m_sport == "americanfootball_nfl":
                 if betType in NFL_MARKET_MAP.keys():
                     validBetTypes.extend(NFL_MARKET_MAP[betType])
+            elif self.m_sport == "baseball_mlb":
+                if betType in MLB_MARKET_MAP.keys():
+                    validBetTypes.extend(MLB_MARKET_MAP[betType])
                 
             bt_filter: DataFrame = df[df['betType'].isin(validBetTypes)]
             if not bt_filter.empty:

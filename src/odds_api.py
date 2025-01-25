@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from dateutil import parser, tz
 import concurrent.futures
 
+
 class CacheFormat:
     def __init__(self, timestamp, data: List[UpcomingEventsEndResponse]):
         self.timestamp: str = timestamp
@@ -74,6 +75,11 @@ class OddsAPI:
     
     CACHE_FILE = '/tmp/upcoming_events_cache.json'
 
+    # set to True to use cache
+    # we will use false now because we need to be able to detect
+    # when a game finishes...
+    USE_CACHE = False
+
     # pass in sport to look at
     # we can change the sport of the API instance by calling its change_sport method
     def __init__(self, live_enabled: bool, sport: List[str], bookmakers: str, regions: str):
@@ -95,7 +101,9 @@ class OddsAPI:
         # cache games, we want to make this API call whenever a new sport is added
         # or a new day occurs
         self.cache: Dict[str, CacheFormat] = {}
-        self.load_cache()
+
+        if OddsAPI.USE_CACHE:
+            self.load_cache()
 
         self.m_sport: List[str] = sport
         self.getUpcomingGames()
@@ -164,19 +172,20 @@ class OddsAPI:
             game.updateUpcoming()
             
     def fetchUpcomingGames(self, sport) -> Tuple[str, List[str], List[UpcomingEventsEndResponse]]:
-        if self._isCacheValid(sport):
-            temp_games = []
+        if OddsAPI.USE_CACHE:
+            if self._isCacheValid(sport):
+                temp_games = []
 
-            # update upcoming status
-            self._updateIsGameUpcoming(self.cache[sport].data)
+                # update upcoming status
+                self._updateIsGameUpcoming(self.cache[sport].data)
 
-            # store all games
-            if self.liveEnabled:
-                temp_games = self.cache[sport].data
-            else:
-                temp_games = [game for game in self.cache[sport].data if game.upcoming]
+                # store all games
+                if self.liveEnabled:
+                    temp_games = self.cache[sport].data
+                else:
+                    temp_games = [game for game in self.cache[sport].data if game.upcoming]
 
-            return sport, [game.id for game in temp_games], temp_games
+                return sport, [game.id for game in temp_games], temp_games
         
         # make API request if cache is not valid
         game_ids = []
@@ -197,19 +206,20 @@ class OddsAPI:
                 games.append(item)
                 game_ids.append(item.id)
 
-        # set the cache
-        # if we execute this between midnight and 8 AM, set the timestamp to 8 AM
-        # if we execute this after 8 AM, set the timestamp to 3 PM
-        # we should always be executing this at 8 AM and 3 PM
-        # according to logic in self._isCacheValid
-        now = datetime.now().astimezone(OddsAPI.TIME_ZONE)
-        if now.hour <= 8:
-            now = now.replace(hour=8, minute=0, second=0, microsecond=0)
-        else:
-            now = now.replace(hour=15, minute=0, second=0, microsecond=0)
-        
-        self.cache[sport] = CacheFormat(now.isoformat(), upcomingEventsEndpoint.result)
-        self.save_cache()
+        if OddsAPI.USE_CACHE:
+            # set the cache
+            # if we execute this between midnight and 8 AM, set the timestamp to 8 AM
+            # if we execute this after 8 AM, set the timestamp to 3 PM
+            # we should always be executing this at 8 AM and 3 PM
+            # according to logic in self._isCacheValid
+            now = datetime.now().astimezone(OddsAPI.TIME_ZONE)
+            if now.hour <= 8:
+                now = now.replace(hour=8, minute=0, second=0, microsecond=0)
+            else:
+                now = now.replace(hour=15, minute=0, second=0, microsecond=0)
+
+                self.cache[sport] = CacheFormat(now.isoformat(), upcomingEventsEndpoint.result)
+                self.save_cache()
 
         return sport, game_ids, games
         

@@ -3,12 +3,12 @@ from endpoints.available_sports_endpoint import AvailableSportsEndpoint
 from endpoints.upcoming_events_endpoint import UpcomingEventsEndpoint
 from endpoints.game_player_props_endpoint import GamePlayerPropsEndpoint
 from models.upcoming_events_response import UpcomingEventsEndResponse
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import os
 import json
 from datetime import datetime, timezone
 from dateutil import parser, tz
-
+import concurrent.futures
 
 class CacheFormat:
     def __init__(self, timestamp, data: List[UpcomingEventsEndResponse]):
@@ -63,7 +63,7 @@ class OddsAPI:
     MARKET_FILE_DICT = {
         "americanfootball_nfl": str(os.path.join(os.path.dirname(__file__), './configs/nfl_markets_player_props.txt')), 
         "basketball_nba": str(os.path.join(os.path.dirname(__file__), './configs/nba_markets_player_props.txt')),
-        "baseball_mlb": str(os.path.join(os.path.dirname(__file__), '.configs/mlb_markets_player_props.txt'))
+        "baseball_mlb": str(os.path.join(os.path.dirname(__file__), './configs/mlb_markets_player_props.txt'))
     }
 
     IGNORED_MARKETS_LIVE_DICT = {
@@ -128,13 +128,17 @@ class OddsAPI:
         if sport not in self.cache.keys():
             return False
 
-        cached_time = parser.parse(self.cache[sport].timestamp).astimezone(OddsAPI.TIME_ZONE).timestamp()
-        now = datetime.now(timezone.utc).astimezone(OddsAPI.TIME_ZONE).timestamp()
+        cached_time = parser.parse(self.cache[sport].timestamp).astimezone(OddsAPI.TIME_ZONE)
+        now = datetime.now(timezone.utc).astimezone(OddsAPI.TIME_ZONE)
 
-        # update our games once a day... happens at 8 AM
-        if (now - cached_time) > 86400:
+        if cached_time.hour == 8 and now.hour >= 15:
             self.remove_cache()
             return False
+        else:
+            # 3 PM - 8 AM is 17 hours...
+            if ((now.timestamp() - cached_time.timestamp()) > (17*60*60)):
+                self.remove_cache()
+                return False
 
         return True
 
@@ -158,90 +162,110 @@ class OddsAPI:
     def _updateIsGameUpcoming(self, games: List[UpcomingEventsEndResponse]):
         for game in games:
             game.updateUpcoming()
-    
-    def getUpcomingGames(self):
-        
-        self.upcomingGames.clear()
-        self.games.clear()
-        
-        for sport in self.m_sport:
-            if sport not in self.upcomingGames:
-                self.upcomingGames[sport] = []
-                
-            if self._isCacheValid(sport):
-                temp_games = []
-                
-                # update upcoming status
-                self._updateIsGameUpcoming(self.cache[sport].data)
+            
+    def fetchUpcomingGames(self, sport) -> Tuple[str, List[str], List[UpcomingEventsEndResponse]]:
+        if self._isCacheValid(sport):
+            temp_games = []
 
-                # store all games
-                if self.liveEnabled:
-                    temp_games = self.cache[sport].data
-                else:
-                    temp_games = [game for game in self.cache[sport].data if game.upcoming]
+            # update upcoming status
+            self._updateIsGameUpcoming(self.cache[sport].data)
 
-                self.games.extend(temp_games)
-                self.upcomingGames[sport] = [game.id for game in temp_games]
+            # store all games
+            if self.liveEnabled:
+                temp_games = self.cache[sport].data
             else:
-                # set up endpoint
-                upcomingEventsEndpoint = UpcomingEventsEndpoint(
+                temp_games = [game for game in self.cache[sport].data if game.upcoming]
+
+            return sport, [game.id for game in temp_games], temp_games
+        
+        # make API request if cache is not valid
+        game_ids = []
+        games = []
+        
+        upcomingEventsEndpoint = UpcomingEventsEndpoint(
                     self.m_baseUrl,
                     self.m_apiKey,
                     sport
                 )
 
-                # populate result
-                upcomingEventsEndpoint.get()
+        # populate result
+        upcomingEventsEndpoint.get()
 
-                # store gameIds
-                for item in upcomingEventsEndpoint.result:
-                    if self.liveEnabled:
-                        self.games.append(item)
-                        self.upcomingGames[sport].append(item.id)
-                    else:
-                        # upcoming games only
-                        if item.upcoming:
-                            self.games.append(item)
-                            self.upcomingGames[sport].append(item.id)
+        # store games and IDs
+        for item in upcomingEventsEndpoint.result:
+            if self.liveEnabled or item.upcoming:
+                games.append(item)
+                game_ids.append(item.id)
 
-                eight_AM_today = datetime.now().astimezone(OddsAPI.TIME_ZONE).replace(hour=8, minute=0, second=0, microsecond=0).isoformat()
-                self.cache[sport] = CacheFormat(eight_AM_today, upcomingEventsEndpoint.result)
-                self.save_cache()
-                
+        # set the cache
+        # if we execute this between midnight and 8 AM, set the timestamp to 8 AM
+        # if we execute this after 8 AM, set the timestamp to 3 PM
+        # we should always be executing this at 8 AM and 3 PM
+        # according to logic in self._isCacheValid
+        now = datetime.now().astimezone(OddsAPI.TIME_ZONE)
+        if now.hour <= 8:
+            now = now.replace(hour=8, minute=0, second=0, microsecond=0)
+        else:
+            now = now.replace(hour=15, minute=0, second=0, microsecond=0)
+        
+        self.cache[sport] = CacheFormat(now.isoformat(), upcomingEventsEndpoint.result)
+        self.save_cache()
+
+        return sport, game_ids, games
+        
+    def getUpcomingGames(self):
+        self.upcomingGames.clear()
+        self.games.clear()
+        
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.fetchUpcomingGames, sport) for sport in self.m_sport]
+            for future in concurrent.futures.as_completed(futures):
+                sport, game_ids, games = future.result()
+                self.upcomingGames[sport] = game_ids
+                self.games.extend(games)
                 
     def find_game(self, id) -> UpcomingEventsEndResponse:
         for game in self.games:
             if game.id == id:
                 return game
-                
+            
+    def fetchPlayerPropsForGame(self, gameId, sport) -> Tuple[str, str]:
+        '''Fetch player props for a given game'''
+        game = self.find_game(gameId)
+        if game:
+            markets = self.markets[sport] if game.upcoming else self.markets[sport + "_live"]
+            gamePlayerPropsEndpoint = GamePlayerPropsEndpoint(
+                self.m_baseUrl,
+                self.m_apiKey,
+                sport,
+                gameId,
+                self.m_regions,
+                self.m_bookMakers,
+                self.m_oddsFormat,
+                self.m_dateFormat,
+                markets
+            )
+            gamePlayerPropsEndpoint.get()
+            return gamePlayerPropsEndpoint.result, sport
+        return "", sport
+        
+    def fetchPlayerProps(self, sport):
+        
+        # start a thread for each game
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.fetchPlayerPropsForGame, gameId, sport) for gameId in self.upcomingGames[sport]]
+            for future in concurrent.futures.as_completed(futures):
+                data, sport = future.result()
+                if sport not in self.response_data:
+                    self.response_data[sport] = []
+                self.response_data[sport].append(data)
+                        
     def getPlayerProps(self):
 
         self.response_data.clear()
         
-        for sport in self.m_sport:
-            if sport not in self.response_data:
-                self.response_data[sport] = []
-                
-            for gameId in self.upcomingGames[sport]:
-                game = self.find_game(gameId)
-                if game:
-                    markets = ""
-                    if game.upcoming:
-                        markets = self.markets[sport]
-                    else:
-                        sport_string = sport + "_live"
-                        markets = self.markets[sport_string]
-
-                    gamePlayerPropsEndpoint = GamePlayerPropsEndpoint(
-                        self.m_baseUrl,
-                        self.m_apiKey,
-                        sport,
-                        gameId,
-                        self.m_regions,
-                        self.m_bookMakers,
-                        self.m_oddsFormat,
-                        self.m_dateFormat,
-                        markets
-                    )
-                    gamePlayerPropsEndpoint.get()
-                    self.response_data[sport].append(gamePlayerPropsEndpoint.result)
+        # start a thread for each sport
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.fetchPlayerProps, sport) for sport in self.m_sport]
+            for future in concurrent.futures.as_completed(futures):
+                future.result()

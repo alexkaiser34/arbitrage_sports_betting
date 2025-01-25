@@ -72,7 +72,7 @@ class OddsAPI:
         "baseball_mlb": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_mlb_markets_live.txt'))
     }
     
-    CACHE_FILE = str(os.path.join(os.path.dirname(__file__), './upcoming_events_cache.json'))
+    CACHE_FILE = '/tmp/upcoming_events_cache.json'
 
     # pass in sport to look at
     # we can change the sport of the API instance by calling its change_sport method

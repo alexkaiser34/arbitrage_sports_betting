@@ -1,1 +1,3 @@
 __pycache__/
+.vscode
+upcoming_events_cache.json

@@ -51,11 +51,11 @@ class App:
         
     def remove_dup_wins(self):
         temp = []
-        
+
         for win in self.wins:
             if win not in temp:
                 temp.append(win)
-                
+
         self.wins = temp
 
     def sort_wins(self):
@@ -98,9 +98,7 @@ class App:
             self.highestWin = self.wins[0]
         
     def find_game(self, bet: WinningBet) -> UpcomingEventsEndResponse:
-        for game in self.m_oddsApi.games:
-            if game.id == bet.game_id:
-                return game
+        return next((game for game in self.m_oddsApi.games if game.id == bet.game_id), None)
                 
     def print_winnings(self):
         if len(self.wins) <= 0:
@@ -146,7 +144,7 @@ class App:
                     else:
                         game_str = str(winningGame)
 
-                    message += f'\n\n+++++++++++ BET OPTION {str(winCount + 1)} +++++++++++\n\n'
+                    message += f'\n\n++++++++++ BET OPTION {str(winCount + 1)} ++++++++++\n\n'
                     message += game_str
                     message += f'\n\n{str(win.bet1)}\n\n{str(win.bet2)}\n\n${str(win.totalWager)} wager = ${str(round(float(win.totalProfit), 2))} profit'
 

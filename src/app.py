@@ -5,6 +5,8 @@ from enum import Enum
 from typing import List, Dict
 from models.upcoming_events_response import UpcomingEventsEndResponse
 from pushover import PushoverNotifications
+import concurrent.futures
+
 
 class App:
     # sports we care about, see a full list of supported sports in
@@ -44,7 +46,8 @@ class App:
         self.apiData.clear()
         self.m_oddsApi.getPlayerProps()
         for sport in self.m_sport:
-            self.apiData[sport] = self.m_oddsApi.response_data[sport]
+            if sport in self.m_oddsApi.response_data.keys():
+                self.apiData[sport] = self.m_oddsApi.response_data[sport]
         
     def remove_dup_wins(self):
         temp = []
@@ -57,28 +60,35 @@ class App:
 
     def sort_wins(self):
         self.wins.sort(key=lambda x: x.totalProfit, reverse=True)
-    
-    def runAlgorithm(self):
         
+    def runAlgoByPlayerProps(self, sport: str, playerProps: str) -> List[WinningBetScenario]:
         algo = ArbitrageAlgorithm(self.m_totalWager)
         
-        self.wins = []
-        
-        for sport in self.m_sport:
-            # each "data" should correspond to player props
-            # for one single game
-            for data in self.apiData[sport]:
-                # create the dataframe for eacb game
-                dfMan = DfManager(data, sport)
+        # create the dataframe for each game
+        dfMan = DfManager(playerProps, sport)
                 
-                # find the valid bets
-                dfMan.create_valid_bets()
+        # find the valid bets
+        dfMan.create_valid_bets()
                 
-                # run the algorithm
-                algo.find_profit(dfMan.m_valid_bets)
+        # run the algorithm
+        algo.find_profit(dfMan.m_valid_bets)
 
-                if len(algo.winning_bets) > 0:
-                    self.wins.extend(algo.winning_bets)
+        return algo.winning_bets
+
+    def runAlgoBySport(self, sport: str):
+        if sport in self.apiData.keys():
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [executor.submit(self.runAlgoByPlayerProps, sport, data) for data in self.apiData[sport]]
+                for future in concurrent.futures.as_completed(futures):
+                    winning_bets = future.result()
+                    self.wins.extend(winning_bets)
+
+    def runAlgorithm(self):
+        self.wins = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.runAlgoBySport, sport) for sport in self.m_sport]
+            for future in concurrent.futures.as_completed(futures):
+                future.result()
 
         self.remove_dup_wins()
         self.sort_wins()

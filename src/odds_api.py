@@ -263,21 +263,26 @@ class OddsAPI:
         
     def fetchPlayerProps(self, sport, delay):
         time.sleep(delay)
-        delay = 1/15
+
+        # hardcode delay to be 1/8...
+        # anything below this might cause us to exceed rate limit
+        delay = 1/8
         # start a thread for each game
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [executor.submit(self.fetchPlayerPropsForGame, gameId, sport, delay) for gameId in self.upcomingGames[sport]]
             for future in concurrent.futures.as_completed(futures):
                 data, sport = future.result()
-                if sport not in self.response_data:
-                    self.response_data[sport] = []
-                self.response_data[sport].append(data)
+                if data != "":
+                    if sport not in self.response_data:
+                        self.response_data[sport] = []
+                    self.response_data[sport].append(data)
                         
     def getPlayerProps(self):
 
         self.response_data.clear()
         
-        delay = 0 if len(self.m_sport) == 0 else 1/len(self.m_sport)
+        # create a small delay in sports
+        delay = 0.8 if len(self.m_sport) > 1 else 0
 
         # start a thread for each sport
         with concurrent.futures.ThreadPoolExecutor() as executor:

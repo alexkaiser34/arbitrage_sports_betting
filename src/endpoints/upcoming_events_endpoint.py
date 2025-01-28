@@ -2,6 +2,9 @@ from endpoints.base_endpoint import BaseEndpoint
 from models.upcoming_events_response import UpcomingEventsEndResponse
 from typing import List
 import json
+from datetime import datetime, timedelta
+from dateutil import parser, tz
+import ciso8601
 
 # ## if we want to filter commenceTimeTo and commenceTimeFrom optional parameters
 # import datetime
@@ -14,7 +17,18 @@ class UpcomingEventsEndpoint(BaseEndpoint):
         self.sport = sport
         self.result : List[UpcomingEventsEndResponse] = []
         self.setEndpointUrl('/sports/' + self.sport + '/events')
-        self.setParameters({'apiKey': self.apiKey})
+
+        # only look for games that are upcoming
+        # should only return todays games...
+        now = datetime.now().astimezone(tz.gettz('America/New_York'))
+        now += timedelta(days=1)
+        now = now.replace(hour=4, minute=59, second=0, microsecond=0)
+        dateFormat = now.isoformat()[:-6] + 'Z'
+
+        self.setParameters({
+            'apiKey': self.apiKey,
+            'commenceTimeTo': dateFormat
+            })
     
     def get(self):
         json_response = super().get()

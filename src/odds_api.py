@@ -243,10 +243,12 @@ class OddsAPI:
             if game.id == id:
                 return game
             
-    def fetchPlayerPropsForGame(self, gameId, sport, delay: float) -> Tuple[str, str]:
+    def fetchPlayerPropsForGame(self, gameId, sport, delay: float, count: int) -> Tuple[str, str]:
         '''Fetch player props for a given game'''
         # small delay to avoid exceeding rate limit
-        time.sleep(delay)
+        if delay > 0.0001:
+            time.sleep(delay * count)
+
         game = self.find_game(gameId)
         if game:
             markets = self.markets[sport] if game.upcoming else self.markets[sport + "_live"]
@@ -265,15 +267,21 @@ class OddsAPI:
                 return gamePlayerPropsEndpoint.result, sport
         return "", sport
         
-    def fetchPlayerProps(self, sport, delay):
-        time.sleep(delay)
+    def fetchPlayerProps(self, sport, delay: float, count: int):
+        # small delay in between sports
+        if delay > 0.0001:
+            time.sleep(delay * count)
+        num_games = len(self.games)
+        delay = 0
 
-        # hardcode delay to be 1/8...
-        # anything below this might cause us to exceed rate limit
-        delay = 1/8
+        # add in logic to increase delay with large number of games
+        # without this, we will exceed the rate limit
+        if num_games > (len(self.m_sport) * 20):
+            delay = 1.0 / 20.0
+
         # start a thread for each game
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.fetchPlayerPropsForGame, gameId, sport, delay) for gameId in self.upcomingGames[sport]]
+            futures = [executor.submit(self.fetchPlayerPropsForGame, gameId, sport, delay, count) for count, gameId in enumerate(self.upcomingGames[sport])]
             for future in concurrent.futures.as_completed(futures):
                 data, sport = future.result()
                 if data != "":
@@ -286,10 +294,10 @@ class OddsAPI:
         self.response_data.clear()
         
         # create a small delay in sports
-        delay = 0.8 if len(self.m_sport) > 1 else 0
+        delay = 1 if len(self.m_sport) > 1 else 0
 
         # start a thread for each sport
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.fetchPlayerProps, sport, delay) for sport in self.m_sport]
+            futures = [executor.submit(self.fetchPlayerProps, sport, delay, count) for count, sport in enumerate(self.m_sport)]
             for future in concurrent.futures.as_completed(futures):
                 future.result()

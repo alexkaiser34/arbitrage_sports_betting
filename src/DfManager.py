@@ -72,8 +72,13 @@ class DfManager:
     
     def create_df_from_json(self, jsonString) -> DataFrame:
         # converting json string into pandas dataframe
-        df = pd.read_json(StringIO(jsonString))
-        return df
+        try:
+            df = pd.read_json(StringIO(jsonString))
+            return df
+        except:
+            print('Invalid JSON string')
+            print(jsonString)
+        return DataFrame()
     
     def populate_data(self):
         for index, row in self.m_initial_df.iterrows():

@@ -33,6 +33,7 @@ class GamePlayerPropsEndpoint(BaseEndpoint):
     def get(self):
         json_response = super().get()
         self._store_results(json_response)
+        return json_response
 
     def _store_results(self, response):
         

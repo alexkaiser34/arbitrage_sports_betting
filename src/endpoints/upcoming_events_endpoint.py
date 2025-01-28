@@ -19,21 +19,25 @@ class UpcomingEventsEndpoint(BaseEndpoint):
     def get(self):
         json_response = super().get()
         self._store_results(json_response)
+        return json_response
 
     def _store_results(self, response):
         self.result = []
-        j = json.loads(response)
-        
-        for item in j:
-            temp = UpcomingEventsEndResponse(
-                item['id'],
-                item['sport_key'],
-                item['sport_title'],
-                item['commence_time'],
-                item['home_team'],
-                item['away_team']
-            )
-            self.result.append(temp)
+        try:
+            j = json.loads(response)
+
+            for item in j:
+                temp = UpcomingEventsEndResponse(
+                    item['id'],
+                    item['sport_key'],
+                    item['sport_title'],
+                    item['commence_time'],
+                    item['home_team'],
+                    item['away_team']
+                )
+                self.result.append(temp)
+        except:
+            print('Error parsing json')
             
     def print_results(self):
         for result in self.result:

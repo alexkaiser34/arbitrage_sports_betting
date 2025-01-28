@@ -18,6 +18,11 @@ class BaseEndpoint:
     def get(self):
         try:
             response = requests.get(self.m_baseUrl + self.m_endpointUrl, params=self.m_parameters)
+            if response.status_code != 200:
+                print(f'Error with following GET  - response code{response.status_code}')
+                print('URL: ' + self.m_baseUrl + self.m_endpointUrl)
+                print('Params: ' + repr(self.m_parameters))
+                return ''
             return json.dumps(response.json())
         except:
             print('Error with following GET request')

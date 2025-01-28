@@ -9,6 +9,7 @@ import json
 from datetime import datetime, timezone
 from dateutil import parser, tz
 import concurrent.futures
+import time
 
 
 class CacheFormat:
@@ -198,28 +199,27 @@ class OddsAPI:
                 )
 
         # populate result
-        upcomingEventsEndpoint.get()
+        if (upcomingEventsEndpoint.get()):
+            # store games and IDs
+            for item in upcomingEventsEndpoint.result:
+                if self.liveEnabled or item.upcoming:
+                    games.append(item)
+                    game_ids.append(item.id)
 
-        # store games and IDs
-        for item in upcomingEventsEndpoint.result:
-            if self.liveEnabled or item.upcoming:
-                games.append(item)
-                game_ids.append(item.id)
+            if OddsAPI.USE_CACHE:
+                # set the cache
+                # if we execute this between midnight and 8 AM, set the timestamp to 8 AM
+                # if we execute this after 8 AM, set the timestamp to 3 PM
+                # we should always be executing this at 8 AM and 3 PM
+                # according to logic in self._isCacheValid
+                now = datetime.now().astimezone(OddsAPI.TIME_ZONE)
+                if now.hour <= 8:
+                    now = now.replace(hour=8, minute=0, second=0, microsecond=0)
+                else:
+                    now = now.replace(hour=15, minute=0, second=0, microsecond=0)
 
-        if OddsAPI.USE_CACHE:
-            # set the cache
-            # if we execute this between midnight and 8 AM, set the timestamp to 8 AM
-            # if we execute this after 8 AM, set the timestamp to 3 PM
-            # we should always be executing this at 8 AM and 3 PM
-            # according to logic in self._isCacheValid
-            now = datetime.now().astimezone(OddsAPI.TIME_ZONE)
-            if now.hour <= 8:
-                now = now.replace(hour=8, minute=0, second=0, microsecond=0)
-            else:
-                now = now.replace(hour=15, minute=0, second=0, microsecond=0)
-
-                self.cache[sport] = CacheFormat(now.isoformat(), upcomingEventsEndpoint.result)
-                self.save_cache()
+                    self.cache[sport] = CacheFormat(now.isoformat(), upcomingEventsEndpoint.result)
+                    self.save_cache()
 
         return sport, game_ids, games
         
@@ -239,8 +239,10 @@ class OddsAPI:
             if game.id == id:
                 return game
             
-    def fetchPlayerPropsForGame(self, gameId, sport) -> Tuple[str, str]:
+    def fetchPlayerPropsForGame(self, gameId, sport, delay: float) -> Tuple[str, str]:
         '''Fetch player props for a given game'''
+        # small delay to avoid exceeding rate limit
+        time.sleep(delay)
         game = self.find_game(gameId)
         if game:
             markets = self.markets[sport] if game.upcoming else self.markets[sport + "_live"]
@@ -255,15 +257,16 @@ class OddsAPI:
                 self.m_dateFormat,
                 markets
             )
-            gamePlayerPropsEndpoint.get()
-            return gamePlayerPropsEndpoint.result, sport
+            if (gamePlayerPropsEndpoint.get()):
+                return gamePlayerPropsEndpoint.result, sport
         return "", sport
         
-    def fetchPlayerProps(self, sport):
-        
+    def fetchPlayerProps(self, sport, delay):
+        time.sleep(delay)
+        delay = 1/15
         # start a thread for each game
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.fetchPlayerPropsForGame, gameId, sport) for gameId in self.upcomingGames[sport]]
+            futures = [executor.submit(self.fetchPlayerPropsForGame, gameId, sport, delay) for gameId in self.upcomingGames[sport]]
             for future in concurrent.futures.as_completed(futures):
                 data, sport = future.result()
                 if sport not in self.response_data:
@@ -274,8 +277,10 @@ class OddsAPI:
 
         self.response_data.clear()
         
+        delay = 0 if len(self.m_sport) == 0 else 1/len(self.m_sport)
+
         # start a thread for each sport
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.fetchPlayerProps, sport) for sport in self.m_sport]
+            futures = [executor.submit(self.fetchPlayerProps, sport, delay) for sport in self.m_sport]
             for future in concurrent.futures.as_completed(futures):
                 future.result()

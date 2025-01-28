@@ -126,10 +126,10 @@ class DfManager:
             validBetTypes: List[str] = []
             validBetTypes.append(betType)
 
-            if self.m_sport == "basketball_nba":
+            if self.m_sport == "basketball_nba" or self.m_sport == "basketball_ncaab":
                 if betType in NBA_MARKET_MAP.keys():
                     validBetTypes.extend(NBA_MARKET_MAP[betType])
-            elif self.m_sport == "americanfootball_nfl":
+            elif self.m_sport == "americanfootball_nfl" or self.m_sport == "americanfootball_ncaaf":
                 if betType in NFL_MARKET_MAP.keys():
                     validBetTypes.extend(NFL_MARKET_MAP[betType])
             elif self.m_sport == "baseball_mlb":

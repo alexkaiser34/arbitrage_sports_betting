@@ -30,21 +30,23 @@ class ConfigDecoder(json.JSONDecoder):
         )
 
 def lets_begin(appConfig: Config):
-    if appConfig is not None:
-        if appConfig.enabled:
-            app = App(
-                appConfig.live_enabled,
-                appConfig.sports,
-                appConfig.wager,
-                appConfig.bookmakers,
-                appConfig.regions
-            )
-            app.run()
+    try:
+        if appConfig is not None:
+            if appConfig.enabled:
+                app = App(
+                    appConfig.live_enabled,
+                    appConfig.sports,
+                    appConfig.wager,
+                    appConfig.bookmakers,
+                    appConfig.regions
+                )
+                app.run()
+            else:
+                print("App is currently disabled")
         else:
-            print("App is currently disabled")
-    else:
-        print("Error loading config")
-
+            print("Error loading config")
+    except Exception as e:
+        print(f"Error running app: {str(e)}")
 
 def handler(event, context):
 

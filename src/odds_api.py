@@ -65,13 +65,17 @@ class OddsAPI:
     MARKET_FILE_DICT = {
         "americanfootball_nfl": str(os.path.join(os.path.dirname(__file__), './configs/nfl_markets_player_props.txt')), 
         "basketball_nba": str(os.path.join(os.path.dirname(__file__), './configs/nba_markets_player_props.txt')),
-        "baseball_mlb": str(os.path.join(os.path.dirname(__file__), './configs/mlb_markets_player_props.txt'))
+        "baseball_mlb": str(os.path.join(os.path.dirname(__file__), './configs/mlb_markets_player_props.txt')),
+        "basketball_ncaab": str(os.path.join(os.path.dirname(__file__), './configs/ncaab_markets_player_props.txt')),
+        "americanfootball_ncaaf": str(os.path.join(os.path.dirname(__file__), './configs/ncaaf_markets_player_props.txt'))
     }
 
     IGNORED_MARKETS_LIVE_DICT = {
         "americanfootball_nfl": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_nfl_markets_live.txt')), 
         "basketball_nba": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_nba_markets_live.txt')),
-        "baseball_mlb": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_mlb_markets_live.txt'))
+        "baseball_mlb": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_mlb_markets_live.txt')),
+        "basketball_ncaab": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_ncaab_markets_live.txt')),
+        "americanfootball_ncaaf": str(os.path.join(os.path.dirname(__file__),'./configs/ignored_ncaaf_markets_live.txt'))   
     }
     
     CACHE_FILE = '/tmp/upcoming_events_cache.json'

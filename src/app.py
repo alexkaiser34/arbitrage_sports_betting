@@ -9,21 +9,21 @@ import concurrent.futures
 
 
 class App:
-    # sports we care about, see a full list of supported sports in
-    # examples/available_sports.json
+    # sports we care about
     SUPPORTED_SPORTS=[
         "americanfootball_nfl", 
         "basketball_nba",
-        "baseball_mlb"
+        "baseball_mlb",
+        "basketball_ncaab",
+        "americanfootball_ncaaf"
     ]
-    
-    class Sports(Enum):
-        FOOTBALL = 0
-        BASKETBALL = 1
-        BASEBALL = 2
     
     def __init__(self, live_enabled: bool, sport:str, totalWager: int, bookmakers: str, regions: str):
         self.m_sport: List[str] = [x.strip() for x in sport.split(',')]
+        for sport in self.m_sport:
+            if sport not in self.SUPPORTED_SPORTS:
+                raise ValueError(f"Unsupported sport: {sport}")
+
         self.m_totalWager = totalWager
         self.m_oddsApi: OddsAPI = OddsAPI(live_enabled, self.m_sport, bookmakers, regions)
         self.m_pushover = PushoverNotifications()

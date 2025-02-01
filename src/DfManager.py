@@ -143,7 +143,6 @@ class DfManager:
             
                 for indexO, overRow in o_filter.iterrows():
                     temp = []
-                    found = False
                     valid = False
                     if (overRow['price'] > 0):
                         valid = True
@@ -151,7 +150,6 @@ class DfManager:
                     for indexU, underRow in u_filter.iterrows():
                         if abs(underRow['point'] - overRow['point']) <= 0.6:
                             if (((not valid) and (underRow['price'] > 0)) or valid):
-                                found = True
                                 under_bet = SingleBet(
                                     underRow['game_id'],
                                     underRow['commence_time'],
@@ -164,7 +162,7 @@ class DfManager:
                                     underRow['point']
                                 )
                                 temp.append(under_bet)
-                    if found and valid:
+                    if len(temp) > 0:
                         over_bet = SingleBet(
                                 overRow['game_id'],
                                 overRow['commence_time'],

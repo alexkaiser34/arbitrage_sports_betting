@@ -85,6 +85,9 @@ class OddsAPI:
     # when a game finishes...
     USE_CACHE = False
 
+    # we do not want to look at more than this amount of games
+    MAX_GAMES = 30
+
     # pass in sport to look at
     # we can change the sport of the API instance by calling its change_sport method
     def __init__(self, live_enabled: bool, sport: List[str], bookmakers: str, regions: str):
@@ -226,7 +229,50 @@ class OddsAPI:
                     self.save_cache()
 
         return sport, game_ids, games
+
+    def _balanceGames(self):
+        num_games = len(self.games)
+        max_games = OddsAPI.MAX_GAMES
         
+        # balance games when we have more than MAX_GAMES
+        if num_games > max_games:
+            max_games_per_sport = max_games // len(self.upcomingGames)
+
+            # Create a new dictionary to hold the balanced games
+            balanced_upcoming_games = {}
+            balanced_games = []
+
+            # First, add up to max_games_per_sport games for each sport
+            for sport, game_ids in self.upcomingGames.items():
+                balanced_upcoming_games[sport] = game_ids[:max_games_per_sport]
+                balanced_games.extend(game_ids[:max_games_per_sport])
+
+            remaining_games = max_games - len(balanced_games)
+            sport_indices = {sport: max_games_per_sport for sport in self.upcomingGames}
+
+            while remaining_games > 0:
+                for sport, game_ids in self.upcomingGames.items():
+                    if remaining_games <= 0:
+                        break
+                    current_index = sport_indices[sport]
+                    if current_index < len(game_ids):
+                        balanced_upcoming_games[sport].append(game_ids[current_index])
+                        balanced_games.append(game_ids[current_index])
+                        sport_indices[sport] += 1
+                        remaining_games -= 1
+
+            # Update self.upcomingGames and self.games
+            self.upcomingGames = balanced_upcoming_games
+            self.games = [game for game in self.games if game.id in balanced_games]
+
+    def _printGames(self):
+        print('--------- GAME INFO ----------- ')
+        print(f'\nTotal number of games = {len(self.games)}\n')
+        for sport in self.upcomingGames:
+            print(f'\n{sport} has {len(self.upcomingGames[sport])} games\n')
+            print(self.upcomingGames[sport])
+        print('------------------------------- ')
+
     def getUpcomingGames(self):
         self.upcomingGames.clear()
         self.games.clear()
@@ -237,6 +283,9 @@ class OddsAPI:
                 sport, game_ids, games = future.result()
                 self.upcomingGames[sport] = game_ids
                 self.games.extend(games)
+
+        self._balanceGames()
+        self._printGames()
                 
     def find_game(self, id) -> UpcomingEventsEndResponse:
         for game in self.games:

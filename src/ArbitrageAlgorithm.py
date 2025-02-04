@@ -67,7 +67,7 @@ NAME_CONDENSER = {
     "player_receptions_alternate" : "# rec alt"
 }
 
-class SingleBet:
+class SingleBet(object):
     TIME_ZONE = tz.gettz('America/New_York')
     def __init__(self, game_id, commence_time, last_update, bookmaker, betType, name, description, price, point):
         self.game_id = game_id

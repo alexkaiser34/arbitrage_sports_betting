@@ -1,12 +1,15 @@
 import pandas as pd
-from pandas import DataFrame
+import numpy as np
 import json
+import os
 from io import StringIO
 from ArbitrageAlgorithm import ArbitrageAlgorithm, WinningBet, SingleBet
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 ##################### DF Schema ##################
 # game_id   commence_time   last_update   bookmaker  betType  name  O/U  price  point
+
+
 
 NFL_MARKET_MAP = {
     "player_field_goals": [ "player_field_goals_alternate" ],
@@ -53,139 +56,117 @@ MLB_MARKET_MAP = {
     "pitcher_strikeouts": [ "pitcher_strikeouts_alternate" ]
 }
 
+MARKET_MAP = {
+    "americanfootball_nfl": NFL_MARKET_MAP,
+    "basketball_nba": NBA_MARKET_MAP,
+    "baseball_mlb": MLB_MARKET_MAP,
+    "basketball_ncaab": NBA_MARKET_MAP,
+    "americanfootball_ncaaf": NFL_MARKET_MAP
+}
+
 class DfManager:
     
     def __init__(self, jsonString: str, sport: str):
-        self.m_jsonString: str = jsonString
-        self.m_sport: List[str] = sport
-        
-        self.m_initial_df: DataFrame = self.create_df_from_json(self.m_jsonString)
-        self.df: DataFrame = None
-        
-        self.m_data: List[SingleBet] = []
-        self.m_valid_bets: dict[str, List[Tuple[SingleBet, List[SingleBet]]]] = {}
-        self.m_betTypes: set[str] = set()
-        self.m_playerNames: set[str] = set()
-        self.m_bookmakers: set[str] = set()
-
-        self.populate_data()
+        self.m_sport: str = sport
+        self.m_initial_df: pd.DataFrame = self.create_df_from_json(jsonString)
+        self.df: pd.DataFrame = None
+        self.m_data: List[SingleBet] = self._populate_data()
+        self.m_valid_bets: Dict[str, List[Tuple[SingleBet, List[SingleBet]]]] = {}
     
-    def create_df_from_json(self, jsonString) -> DataFrame:
+    def create_df_from_json(self, jsonString:str) -> pd.DataFrame:
         # converting json string into pandas dataframe
         try:
-            df = pd.read_json(StringIO(jsonString))
-            return df
-        except:
+            j = '[' + jsonString + ']'
+            return pd.read_json(StringIO(j))
+        except Exception as e:
             print('Invalid JSON string')
             print(jsonString)
-        return DataFrame()
+        return pd.DataFrame()
     
-    def populate_data(self):
-        for index, row in self.m_initial_df.iterrows():
-            bets = []        
-            gameId = row['id']
-            commence_time = row['commence_time']
-            bets = self._create_bets(row['bookmakers'], gameId, commence_time)
-            self.m_data.extend(bets)
-            
-        self.df = pd.DataFrame.from_records([data.to_dict() for data in self.m_data])
-    
-    def _create_bets(self, bookmaker, gameId, commence_time):
-        bets = []
-        bookMakerName = bookmaker['key']
-        self.m_bookmakers.add(bookMakerName)
-        for market in bookmaker['markets']:
-            bet_type = market['key']
-            self.m_betTypes.add(bet_type)
-            last_update = market['last_update']
-            for outcome in market['outcomes']:
-                # ignore data with no point...
-                if "point" in outcome:
-                    name = outcome['description']
-                    o_u = ''
-                    if outcome['name'] == 'Over':
-                        o_u = 'O'
-                    else:
-                        o_u = 'U'
-                    price = outcome['price']
-                    point = outcome['point']
-                    bet = SingleBet(gameId, commence_time, last_update, bookMakerName, bet_type, name, o_u, price, point)
-                    bets.append(bet)
-                    self.m_playerNames.add(name)
-        return bets
-                
+    def _populate_data(self) -> List[SingleBet]:
+        """Optimized data population using list comprehensions."""
+        return [
+            SingleBet(
+                row['id'], row['commence_time'], market['last_update'], bookmaker['key'], 
+                market['key'], outcome['description'], 'O' if outcome['name'] == 'Over' else 'U', 
+                outcome['price'], outcome['point']
+            )
+            for _, row in self.m_initial_df.iterrows()
+            for bookmaker in row['bookmakers']
+            for market in bookmaker['markets']
+            for outcome in market['outcomes'] if "point" in outcome
+        ]
                 
     def create_valid_bets(self):
-        # go through each player name and find valid bets...
-        for name in self.m_playerNames:
-            filtered_df: DataFrame= self.df[self.df['name'] == name]
-            self.find_valid_bets(filtered_df)
-            
-    def find_valid_bets(self, df: DataFrame):
-        for betType in self.m_betTypes:
+        """Find valid bets using optimized filtering."""
+        self.df = pd.DataFrame.from_records([bet.to_dict() for bet in self.m_data])
+        if not self.df.empty:
+            for name in self.df['name'].unique():
+                self.find_valid_bets(self.df[self.df['name'] == name])
+
+    def find_valid_bets(self, df: pd.DataFrame):
+        """Optimized filtering using NumPy operations."""
+        uniqueBets = set(df['betType'].unique())
+        commonBets = uniqueBets.intersection(set(MARKET_MAP[self.m_sport].keys()))
+        
+        for betType in commonBets:
             validBetTypes: List[str] = []
             validBetTypes.append(betType)
+            validBetTypes.extend(MARKET_MAP[self.m_sport][betType])
 
-            if self.m_sport == "basketball_nba" or self.m_sport == "basketball_ncaab":
-                if betType in NBA_MARKET_MAP.keys():
-                    validBetTypes.extend(NBA_MARKET_MAP[betType])
-            elif self.m_sport == "americanfootball_nfl" or self.m_sport == "americanfootball_ncaaf":
-                if betType in NFL_MARKET_MAP.keys():
-                    validBetTypes.extend(NFL_MARKET_MAP[betType])
-            elif self.m_sport == "baseball_mlb":
-                if betType in MLB_MARKET_MAP.keys():
-                    validBetTypes.extend(MLB_MARKET_MAP[betType])
+            valid_bets = df.query("betType in @validBetTypes")
+            
+            over_bets = valid_bets[valid_bets['o/u'] == 'O']
+            under_bets = valid_bets[valid_bets['o/u'] == 'U']
+            
+            for _, over in over_bets.iterrows():
+                close_bets: pd.DataFrame = under_bets[np.abs(under_bets['point'] - over['point']) <= 0.6]
                 
-            bt_filter: DataFrame = df[df['betType'].isin(validBetTypes)]
-            if not bt_filter.empty:
-                o_filter: DataFrame = bt_filter[bt_filter['o/u'] == 'O']
-                u_filter: DataFrame = bt_filter[bt_filter['o/u'] == 'U']
-            
-                for indexO, overRow in o_filter.iterrows():
-                    temp = []
-                    valid = False
-                    if (overRow['price'] > 0):
-                        valid = True
+                # one bet needs to have positive odds...
+                if over['price'] < 0:
+                    close_bets = close_bets[close_bets['price'] > 0]
+
+                if not close_bets.empty:
+                    # create all of the valid bets
+                    valid_close_bets = [
+                        SingleBet(
+                            bet['game_id'],
+                            bet['commence_time'],
+                            bet['last_update'],
+                            bet['bookmaker'],
+                            bet['betType'],
+                            bet['name'],
+                            bet['o/u'],
+                            bet['price'],
+                            bet['point'] 
+                        ) for bet in close_bets.to_dict(orient='records')]
+
+                    over_bet = SingleBet(
+                        over['game_id'],
+                        over['commence_time'],
+                        over['last_update'],
+                        over['bookmaker'],
+                        over['betType'],
+                        over['name'],
+                        over['o/u'],
+                        over['price'],
+                        over['point']
+                    )
                     
-                    for indexU, underRow in u_filter.iterrows():
-                        if abs(underRow['point'] - overRow['point']) <= 0.6:
-                            if (((not valid) and (underRow['price'] > 0)) or valid):
-                                under_bet = SingleBet(
-                                    underRow['game_id'],
-                                    underRow['commence_time'],
-                                    underRow['last_update'],
-                                    underRow['bookmaker'],
-                                    underRow['betType'],
-                                    underRow['name'],
-                                    underRow['o/u'],
-                                    underRow['price'],
-                                    underRow['point']
-                                )
-                                temp.append(under_bet)
-                    if len(temp) > 0:
-                        over_bet = SingleBet(
-                                overRow['game_id'],
-                                overRow['commence_time'],
-                                overRow['last_update'],
-                                overRow['bookmaker'],
-                                overRow['betType'],
-                                overRow['name'],
-                                overRow['o/u'],
-                                overRow['price'],
-                                overRow['point']
-                            )
-                        if over_bet.name not in self.m_valid_bets:
-                            self.m_valid_bets[over_bet.name] = []
-                        self.m_valid_bets[over_bet.name].append((over_bet, temp))
+                    # append the array
+                    self.m_valid_bets.setdefault(over['name'], []).append((over_bet, valid_close_bets))
     
-    def parse_valid_bets(self):
-        for player in self.valid_bets.keys():
-            print("=============================================")
-            print("Bet summary for " + player + "\n")
+    def parse_valid_bets(self) -> str:
+        s = ""
+        for player in self.m_valid_bets.keys():
             
-            for valid_bets in self.valid_bets[player]:
-                print("+++++++++++++++++++++++++++++++++++")
-                print(f'MAIN BET\n\t -- {valid_bets[0]}\n')
-                print('VALID BETS')
+            s += "=============================================\n"
+            s += "Bet summary for " + player + "\n"
+            
+            for valid_bets in self.m_valid_bets[player]:
+                s+= "+++++++++++++++++++++++++++++++++++\n"
+                s+= f'MAIN BET\n\t -- {valid_bets[0]}\n'
+                s+= 'VALID BETS\n'
                 for v in valid_bets[1]:
-                    print(f'\t -- {v}')
+                    s+= f'\t -- {v}\n'
+        return s

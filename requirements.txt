@@ -1,5 +1,6 @@
 boto3==1.35.97
 ciso8601==2.3.2
+numpy==2.2.2
 pandas==2.2.3
 python_dateutil==2.9.0.post0
 Requests==2.32.3

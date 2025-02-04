@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from dateutil import parser, tz
 import concurrent.futures
 import time
+import ciso8601
 
 
 class CacheFormat:
@@ -196,8 +197,8 @@ class OddsAPI:
                 return sport, [game.id for game in temp_games], temp_games
         
         # make API request if cache is not valid
-        game_ids = []
-        games = []
+        game_ids : List[str] = []
+        games : List[UpcomingEventsEndResponse] = []
         
         upcomingEventsEndpoint = UpcomingEventsEndpoint(
                     self.m_baseUrl,
@@ -211,7 +212,6 @@ class OddsAPI:
             for item in upcomingEventsEndpoint.result:
                 if self.liveEnabled or item.upcoming:
                     games.append(item)
-                    game_ids.append(item.id)
 
             if OddsAPI.USE_CACHE:
                 # set the cache
@@ -227,6 +227,11 @@ class OddsAPI:
 
                     self.cache[sport] = CacheFormat(now.isoformat(), upcomingEventsEndpoint.result)
                     self.save_cache()
+
+        # look at the most recent games
+        games.sort(key=lambda x: ciso8601.parse_datetime(x.commence_time).astimezone(OddsAPI.TIME_ZONE).timestamp())
+        for game in games:
+            game_ids.append(game.id)
 
         return sport, game_ids, games
 
@@ -272,6 +277,7 @@ class OddsAPI:
             print(f'\n{sport} has {len(self.upcomingGames[sport])} games\n')
             print(self.upcomingGames[sport])
         print('------------------------------- ')
+
 
     def getUpcomingGames(self):
         self.upcomingGames.clear()

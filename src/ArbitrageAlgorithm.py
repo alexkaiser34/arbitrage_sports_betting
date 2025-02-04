@@ -2,6 +2,7 @@ from typing import List, Tuple, Dict
 from dateutil import parser, tz
 from datetime import datetime
 import math
+import numpy as np
 
 
 NAME_CONDENSER = {
@@ -109,6 +110,7 @@ class WinningBet(SingleBet):
         else:
             price_str = str(self.price)
         date = parser.parse(self.last_update).astimezone(SingleBet.TIME_ZONE).strftime("%m/%d %I:%M:%S %p")
+        
         bt = NAME_CONDENSER[self.betType]
         return f'{self.bookmaker} :: {bt} :: {date} :: {self.description} {str(self.point)} for {self.name} @ {price_str}: ${str(self.spend_amount)}'
 
@@ -137,16 +139,12 @@ class WinningBetScenario:
 class ArbitrageAlgorithm:
     def __init__(self, totalWager: int):
         self.total_wager: int = totalWager
-        self.valid_bets: Dict[str, List[Tuple[SingleBet, List[SingleBet]]]]= []
+        self.valid_bets: Dict[str, List[Tuple[SingleBet, List[SingleBet]]]]= {}
         self.winning_bets : List[WinningBetScenario] = []
         
-    def setTotalWager(self, totalWager: int):
-        self.total_wager = totalWager
-        
-    def _american_to_decimal(self, american_odds):
-        if american_odds > 0:
-            return (american_odds/100) + 1
-        return (100/abs(american_odds)) + 1
+    @staticmethod
+    def _american_to_decimal(american_odds: int) -> float:
+        return np.where(american_odds > 0, (american_odds / 100) + 1, (100 / np.abs(american_odds)) + 1)
     
     def _isBetOld(self, bet: SingleBet):
         timeOld = parser.parse(bet.last_update).astimezone(SingleBet.TIME_ZONE).timestamp()
@@ -162,14 +160,20 @@ class ArbitrageAlgorithm:
         self.valid_bets = bets
         self.win_profit = 0
         self.winning_bets = []
-        for player in self.valid_bets.keys():
-            for valid_bets in self.valid_bets[player]:
-                bet1 = valid_bets[0]
-                
-                for vb in valid_bets[1]:
-                    bet2 = vb
-                    if (not self._isBetOld(bet1)) and (not self._isBetOld(bet2)):
-                        self._get_potential_gain(bet1, bet2)
+
+        for player, valid_bets in bets.items():
+            bet_array = np.array([(b1, b2) for b1, b_list in valid_bets for b2 in b_list])
+            valid_pairs = bet_array[np.vectorize(self._isValidPair)(bet_array[:, 0], bet_array[:, 1])]
+
+            for b1, b2 in valid_pairs:
+                self._get_potential_gain(b1, b2)
+
+    def _isValidPair(self, b1: SingleBet, b2: SingleBet) -> bool:
+        b1_dec = self._american_to_decimal(b1.price)
+        b2_dec = self._american_to_decimal(b2.price)
+        isProfitable :bool = ((1 / b1_dec) + (1 / b2_dec) < 1)
+        isOld :bool= (self._isBetOld(b1) or self._isBetOld(b2))
+        return isProfitable and (not isOld)
                     
     def _round_numbers(self, num: float, roundUp: str) -> int:
         abs_number = abs(num)
